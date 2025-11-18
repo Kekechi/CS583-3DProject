@@ -36,6 +36,7 @@ public class GameManager : MonoBehaviour
 
     void Awake()
     {
+        Debug.Log("Game Awake");
         // Singleton pattern
         if (Instance == null)
         {

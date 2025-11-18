@@ -5,8 +5,8 @@ using UnityEngine.UI;
 
 public class RoomController : MonoBehaviour
 {
-    [Header("Room Data")]
-    public RoomData currentRoomData;
+    // [Header("Room Data")]
+    // public RoomData currentRoomData;
 
     [Header("Placement System")]
     public Transform[] placementSpots; // 3 spots per room
@@ -184,10 +184,10 @@ public class RoomController : MonoBehaviour
         camTransform.rotation = targetPosition.rotation;
     }
 
-    public void LoadRoomData(RoomData data)
-    {
-        currentRoomData = data;
-        // Apply room-specific settings (lighting, theme, etc.)
-        // This will be expanded when ScriptableObjects are implemented
-    }
+    // public void LoadRoomData(RoomData data)
+    // {
+    //     // currentRoomData = data;
+    //     // Apply room-specific settings (lighting, theme, etc.)
+    //     // This will be expanded when ScriptableObjects are implemented
+    // }
 }

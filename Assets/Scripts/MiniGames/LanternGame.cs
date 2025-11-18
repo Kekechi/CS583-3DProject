@@ -14,7 +14,7 @@ public class LanternGame : MonoBehaviour
     [Tooltip("Input key to increase brightness")]
     public KeyCode inputKey = KeyCode.Space;
 
-    [Header("Green Zone Thresholds")]
+    [Header("Green Zone Settings")]
     [Range(0f, 1f)] public float greenZoneMin = 0.4f;
     [Range(0f, 1f)] public float greenZoneMax = 0.6f;
 
@@ -29,8 +29,8 @@ public class LanternGame : MonoBehaviour
     public Color emissionColorMax = Color.yellow; // Bright state
     [Range(0f, 10f)] public float emissionIntensityMultiplier = 2f;
 
-    [Header("Progress Bar - TODO")]
-    public GameObject progressBarPlaceholder; // Placeholder object for now
+    [Header("UI References")]
+    public LanternProgressBar progressBar; // Vertical brightness bar UI
 
     // Game state
     private float brightness = 0.5f;
@@ -61,8 +61,19 @@ public class LanternGame : MonoBehaviour
         // Update lantern emission
         UpdateLanternEmission();
 
+        // Update progress bar and track green zone time
+        bool inGreenZone = false;
+        if (progressBar != null)
+        {
+            inGreenZone = progressBar.UpdateBrightness(brightness);
+        }
+        else
+        {
+            inGreenZone = IsInGreenZone();
+        }
+
         // Track time in green zone
-        if (IsInGreenZone())
+        if (inGreenZone)
         {
             timeInGreenZone += Time.deltaTime;
             Debug.Log($"Time in green zone: {timeInGreenZone:F2}s / {goalTime:F2}s");
@@ -80,6 +91,7 @@ public class LanternGame : MonoBehaviour
         }
     }
 
+    [ContextMenu("Test")]
     public void StartGame()
     {
         isPlaying = true;
@@ -91,8 +103,13 @@ public class LanternGame : MonoBehaviour
         // Spawn the lantern prefab
         SpawnLantern();
 
-        if (progressBarPlaceholder != null)
-            progressBarPlaceholder.SetActive(true);
+        // Setup and show progress bar
+        if (progressBar != null)
+        {
+            progressBar.SetGreenZone(greenZoneMin, greenZoneMax);
+            progressBar.UpdateBrightness(brightness); // Set initial value
+            progressBar.Show();
+        }
     }
 
     void SpawnLantern()
@@ -177,8 +194,8 @@ public class LanternGame : MonoBehaviour
         isPlaying = false;
         Debug.Log("[LanternGame] Game completed! Perfect harmony achieved!");
 
-        if (progressBarPlaceholder != null)
-            progressBarPlaceholder.SetActive(false);
+        if (progressBar != null)
+            progressBar.Hide();
 
         // Play audio
         if (AudioManager.Instance != null)

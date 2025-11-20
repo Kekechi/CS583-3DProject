@@ -1,52 +1,80 @@
-using System.Collections;
-using System.Collections.Generic;
+using System;
 using UnityEngine;
 
+/// <summary>
+/// Game logic controller for the Lantern mini-game.
+/// Tracks brightness, harmony zone status, and win condition.
+/// </summary>
 public class LanternGame : MonoBehaviour
 {
     [Header("Game Settings")]
-    [Tooltip("Time player must keep brightness in green zone to win")]
+    [Tooltip("Lower bound of harmony zone (0-1)")]
+    [Range(0f, 1f)] public float harmonyZoneMin = 0.4f;
+
+    [Tooltip("Upper bound of harmony zone (0-1)")]
+    [Range(0f, 1f)] public float harmonyZoneMax = 0.6f;
+
+    [Tooltip("Time player must stay in harmony to win (seconds)")]
     public float goalTime = 10f;
 
-    [Tooltip("How fast brightness changes when holding/releasing")]
-    public float brightnessChangeSpeed = 0.5f;
+    [Tooltip("How fast brightness changes per second")]
+    public float brightnessChangeSpeed = 0.3f;
 
     [Tooltip("Input key to increase brightness")]
-    public KeyCode inputKey = KeyCode.Space;
+    public KeyCode increaseKey = KeyCode.Space;
 
-    [Header("Green Zone Settings")]
-    [Range(0f, 1f)] public float greenZoneMin = 0.4f;
-    [Range(0f, 1f)] public float greenZoneMax = 0.6f;
+    [Header("References")]
+    [Tooltip("Reference to the UI controller")]
+    public LanternUI ui;
 
-    [Header("Lantern Prefab")]
-    public GameObject lanternPrefab; // The lantern prefab to spawn
-    public Transform spawnPoint; // Where to spawn the lantern (optional)
-    public string paperChildName = "Paper"; // Name of the paper cube child in prefab
+    [Tooltip("Lantern prefab to spawn")]
+    public GameObject lanternPrefab;
 
-    [Header("Lantern Visual")]
-    public string emissionProperty = "_EmissionColor"; // Standard shader emission property
-    public Color emissionColorMin = Color.black; // Dim/off state
-    public Color emissionColorMax = Color.yellow; // Bright state
-    [Range(0f, 10f)] public float emissionIntensityMultiplier = 2f;
+    [Tooltip("Where to spawn the lantern")]
+    public Transform spawnPoint;
 
-    [Header("UI References")]
-    public LanternProgressBar progressBar; // Vertical brightness bar UI
-
-    // Game state
+    // State
     private float brightness = 0.5f;
-    private float timeInGreenZone = 0f;
+    private float timeInHarmony = 0f;
     private bool isPlaying = false;
 
     // Spawned lantern references
     private GameObject spawnedLantern;
-    private Renderer lanternPaperRenderer;
+    private LanternVisual lanternVisual;
+
+    // Events
+    public event Action OnGameStarted;
+    public event Action<LanternResult> OnGameCompleted;
+
+    /// <summary>
+    /// Start the mini-game: spawn lantern, show UI, reset state
+    /// </summary>
+    [ContextMenu("Start Game")]
+    public void StartGame()
+    {
+        isPlaying = true;
+        brightness = 0.5f;
+        timeInHarmony = 0f;
+
+        SpawnLantern();
+
+        if (ui != null)
+        {
+            ui.Show();
+            ui.SetupHarmonyZone(harmonyZoneMin, harmonyZoneMax);
+        }
+
+        OnGameStarted?.Invoke();
+
+        Debug.Log("[LanternGame] Game started");
+    }
 
     void Update()
     {
         if (!isPlaying) return;
 
-        // Input: Hold to increase brightness, release to decrease
-        if (Input.GetKey(inputKey))
+        // Update brightness based on input
+        if (Input.GetKey(increaseKey))
         {
             brightness += brightnessChangeSpeed * Time.deltaTime;
         }
@@ -55,63 +83,63 @@ public class LanternGame : MonoBehaviour
             brightness -= brightnessChangeSpeed * Time.deltaTime;
         }
 
-        // Clamp brightness between 0 and 1
         brightness = Mathf.Clamp01(brightness);
 
-        // Update lantern emission
-        UpdateLanternEmission();
+        // Check if in harmony zone
+        bool inHarmony = IsInHarmonyZone();
 
-        // Update progress bar and track green zone time
-        bool inGreenZone = false;
-        if (progressBar != null)
+        // Track time in harmony (only counts when in zone)
+        if (inHarmony)
         {
-            inGreenZone = progressBar.UpdateBrightness(brightness);
-        }
-        else
-        {
-            inGreenZone = IsInGreenZone();
+            timeInHarmony += Time.deltaTime;
         }
 
-        // Track time in green zone
-        if (inGreenZone)
+        // Update visuals
+        if (ui != null)
         {
-            timeInGreenZone += Time.deltaTime;
-            Debug.Log($"Time in green zone: {timeInGreenZone:F2}s / {goalTime:F2}s");
+            ui.UpdateDisplay(brightness, inHarmony, timeInHarmony, goalTime);
         }
-        else
+
+        if (lanternVisual != null)
         {
-            // Optional: could reset or slowly decrease time if out of zone
-            // timeInGreenZone = 0f; // Uncomment for harder difficulty
+            lanternVisual.SetBrightness(brightness);
         }
 
         // Check win condition
-        if (timeInGreenZone >= goalTime)
+        if (timeInHarmony >= goalTime)
         {
-            OnGameComplete();
+            CompleteGame();
         }
     }
 
-    [ContextMenu("Test")]
-    public void StartGame()
+    /// <summary>
+    /// Check if current brightness is in the harmony zone
+    /// </summary>
+    public bool IsInHarmonyZone()
     {
-        isPlaying = true;
-        brightness = 0.5f;
-        timeInGreenZone = 0f;
-
-        Debug.Log("[LanternGame] Mini-game started! Hold SPACE to brighten the lantern.");
-
-        // Spawn the lantern prefab
-        SpawnLantern();
-
-        // Setup and show progress bar
-        if (progressBar != null)
-        {
-            progressBar.SetGreenZone(greenZoneMin, greenZoneMax);
-            progressBar.UpdateBrightness(brightness); // Set initial value
-            progressBar.Show();
-        }
+        return brightness >= harmonyZoneMin && brightness <= harmonyZoneMax;
     }
 
+    /// <summary>
+    /// Stop the game and clean up
+    /// </summary>
+    public void StopGame()
+    {
+        isPlaying = false;
+
+        if (ui != null)
+        {
+            ui.Hide();
+        }
+
+        CleanupLantern();
+
+        Debug.Log("[LanternGame] Game stopped");
+    }
+
+    /// <summary>
+    /// Spawn the lantern prefab and get its visual component
+    /// </summary>
     void SpawnLantern()
     {
         if (lanternPrefab == null)
@@ -120,128 +148,71 @@ public class LanternGame : MonoBehaviour
             return;
         }
 
-        // Determine spawn position
         Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : transform.position;
         Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-        // Instantiate the prefab
         spawnedLantern = Instantiate(lanternPrefab, spawnPosition, spawnRotation);
+        lanternVisual = spawnedLantern.GetComponent<LanternVisual>();
+
+        if (lanternVisual == null)
+        {
+            Debug.LogError("[LanternGame] Spawned lantern prefab does not have LanternVisual component!");
+        }
+
         Debug.Log($"[LanternGame] Lantern spawned at {spawnPosition}");
-
-        // Find the paper renderer in children
-        FindPaperRenderer();
     }
 
-    void FindPaperRenderer()
-    {
-        if (spawnedLantern == null) return;
-
-        // Try to find by name first
-        Transform paperTransform = spawnedLantern.transform.Find(paperChildName);
-
-        if (paperTransform != null)
-        {
-            lanternPaperRenderer = paperTransform.GetComponent<Renderer>();
-            Debug.Log($"[LanternGame] Found paper renderer by name: {paperChildName}");
-        }
-        else
-        {
-            // Fallback: search all children for a renderer
-            Renderer[] renderers = spawnedLantern.GetComponentsInChildren<Renderer>();
-
-            foreach (Renderer r in renderers)
-            {
-                // Look for renderer with emissive material
-                if (r.material.HasProperty(emissionProperty))
-                {
-                    lanternPaperRenderer = r;
-                    Debug.Log($"[LanternGame] Found paper renderer on: {r.gameObject.name}");
-                    break;
-                }
-            }
-        }
-
-        if (lanternPaperRenderer == null)
-        {
-            Debug.LogWarning($"[LanternGame] Could not find paper renderer! Looking for child named '{paperChildName}' or renderer with emission property.");
-        }
-    }
-
-    void UpdateLanternEmission()
-    {
-        if (lanternPaperRenderer == null) return;
-
-        // Lerp between min and max emission colors based on brightness
-        Color baseEmission = Color.Lerp(emissionColorMin, emissionColorMax, brightness);
-
-        // Multiply by intensity for HDR glow effect
-        Color finalEmission = baseEmission * emissionIntensityMultiplier;
-
-        // Apply to material
-        lanternPaperRenderer.material.SetColor(emissionProperty, finalEmission);
-
-        // Enable emission keyword for Standard shader
-        lanternPaperRenderer.material.EnableKeyword("_EMISSION");
-    }
-
-    bool IsInGreenZone()
-    {
-        return brightness >= greenZoneMin && brightness <= greenZoneMax;
-    }
-
-    void OnGameComplete()
+    /// <summary>
+    /// Complete the game: create result, fire event, show success
+    /// </summary>
+    void CompleteGame()
     {
         isPlaying = false;
-        Debug.Log("[LanternGame] Game completed! Perfect harmony achieved!");
 
-        if (progressBar != null)
-            progressBar.Hide();
+        Debug.Log($"[LanternGame] Game completed! Time: {timeInHarmony:F2}s, Final brightness: {brightness:F2}");
 
-        // Play audio
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayLanternGlow();
+        if (ui != null)
+        {
+            ui.ShowSuccess();
+        }
 
-        // Trigger game manager event
-        if (GameManager.Instance != null)
-            GameManager.Instance.OnMiniGameComplete();
+        // Create result data
+        LanternResult result = new LanternResult
+        {
+            lanternInstance = spawnedLantern,
+            finalBrightness = brightness,
+            completionTime = Time.time
+        };
 
-        // Keep lantern visible briefly before cleanup
-        StartCoroutine(CleanupLanternAfterDelay(2f));
+        OnGameCompleted?.Invoke(result);
     }
 
-    IEnumerator CleanupLanternAfterDelay(float delay)
-    {
-        yield return new WaitForSeconds(delay);
-        DestroySpawnedLantern();
-    }
-
-    public void StopGame()
-    {
-        isPlaying = false;
-        timeInGreenZone = 0f;
-        DestroySpawnedLantern();
-        Debug.Log("[LanternGame] Game stopped");
-    }
-
-    void DestroySpawnedLantern()
+    /// <summary>
+    /// Destroy the spawned lantern instance
+    /// </summary>
+    void CleanupLantern()
     {
         if (spawnedLantern != null)
         {
             Destroy(spawnedLantern);
-            lanternPaperRenderer = null;
-            Debug.Log("[LanternGame] Spawned lantern destroyed");
+            spawnedLantern = null;
+            lanternVisual = null;
+            Debug.Log("[LanternGame] Lantern cleaned up");
         }
     }
+}
 
-    // Debug visualization in editor
-    void OnGUI()
-    {
-        if (!isPlaying) return;
+/// <summary>
+/// Data container for completed lantern mini-game result
+/// </summary>
+[Serializable]
+public class LanternResult
+{
+    public GameObject lanternInstance;
+    public float finalBrightness;
+    public float completionTime;
 
-        GUILayout.BeginArea(new Rect(10, 10, 300, 100));
-        GUILayout.Label($"Brightness: {brightness:F2}");
-        GUILayout.Label($"In Green Zone: {IsInGreenZone()}");
-        GUILayout.Label($"Progress: {timeInGreenZone:F2}s / {goalTime:F2}s");
-        GUILayout.EndArea();
-    }
+    // Future customization data can go here
+    // public Color paperColor;
+    // public int patternID;
 }

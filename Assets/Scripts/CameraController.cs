@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
@@ -9,9 +10,15 @@ public class CameraController : MonoBehaviour
   public Transform calligraphyPosition;   // Close-up on calligraphy desk
 
   [Header("Movement")]
-  public float transitionSpeed = 2f;
+  [Tooltip("Duration of camera transition in seconds")]
+  public float transitionDuration = 1.5f;
 
-  private Transform targetPosition;
+  [Tooltip("Easing curve for smooth transitions")]
+  public AnimationCurve transitionCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
+
+  public bool IsMoving { get; private set; }
+
+  private Coroutine currentTransition;
 
   [ContextMenu("Test Room")]
   void TestRoom()
@@ -24,19 +31,60 @@ public class CameraController : MonoBehaviour
   {
     MoveTo(lanternGamePosition);
   }
+
+  /// <summary>
+  /// Smoothly move camera to target position using coroutine
+  /// </summary>
   public void MoveTo(Transform newTarget)
   {
-    targetPosition = newTarget;
+    if (newTarget == null)
+    {
+      Debug.LogWarning("[CameraController] Target is null!");
+      return;
+    }
+
+    // Stop previous transition if any
+    if (currentTransition != null)
+    {
+      StopCoroutine(currentTransition);
+    }
+
+    currentTransition = StartCoroutine(TransitionToTarget(newTarget));
   }
 
-  void Update()
+  /// <summary>
+  /// Coroutine for smooth camera transition
+  /// </summary>
+  IEnumerator TransitionToTarget(Transform target)
   {
-    if (targetPosition != null)
+    IsMoving = true;
+
+    Vector3 startPosition = transform.position;
+    Quaternion startRotation = transform.rotation;
+    Vector3 endPosition = target.position;
+    Quaternion endRotation = target.rotation;
+
+    float elapsed = 0f;
+
+    while (elapsed < transitionDuration)
     {
-      transform.position = Vector3.Lerp(transform.position,
-          targetPosition.position, Time.deltaTime * transitionSpeed);
-      transform.rotation = Quaternion.Lerp(transform.rotation,
-          targetPosition.rotation, Time.deltaTime * transitionSpeed);
+      elapsed += Time.deltaTime;
+      float t = elapsed / transitionDuration;
+      float curveValue = transitionCurve.Evaluate(t);
+
+      transform.position = Vector3.Lerp(startPosition, endPosition, curveValue);
+      transform.rotation = Quaternion.Lerp(startRotation, endRotation, curveValue);
+
+      yield return null;
     }
+
+    // Snap to final position
+    transform.position = endPosition;
+    transform.rotation = endRotation;
+
+    IsMoving = false;
+    currentTransition = null;
+
+    Debug.Log($"[CameraController] Arrived at {target.name}");
   }
 }

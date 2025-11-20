@@ -52,17 +52,24 @@ public class GameManager : MonoBehaviour
     void OnEnable()
     {
         // Subscribe to events
-        OnMiniGameCompleted += HandleMiniGameComplete;
+        // OnMiniGameCompleted += HandleMiniGameComplete; // Now handled by MiniGameController transition
         OnItemPlacedEvent += HandleItemPlaced;
         OnPauseRequested += PauseGame;
+
+        // Subscribe to MiniGameController's completion event
+        if (miniGameController != null)
+            miniGameController.OnMiniGameFullyComplete += HandleMiniGameFullyComplete;
     }
 
     void OnDisable()
     {
         // Unsubscribe to prevent memory leaks
-        OnMiniGameCompleted -= HandleMiniGameComplete;
+        // OnMiniGameCompleted -= HandleMiniGameComplete;
         OnItemPlacedEvent -= HandleItemPlaced;
         OnPauseRequested -= PauseGame;
+
+        if (miniGameController != null)
+            miniGameController.OnMiniGameFullyComplete -= HandleMiniGameFullyComplete;
     }
 
     void Start()
@@ -137,8 +144,14 @@ public class GameManager : MonoBehaviour
     }
 
     // Event handlers (private - triggered by events)
-    private void HandleMiniGameComplete()
+    private void HandleMiniGameFullyComplete(object result)
     {
+        Debug.Log($"[GameManager] Mini-game fully complete with result: {result?.GetType().Name}");
+
+        // Store result for placement (can be accessed by RoomController)
+        // For now, just transition to placement state
+        // RoomController will handle the actual placement UI and logic
+
         ChangeState(GameState.PlacingItem);
     }
 

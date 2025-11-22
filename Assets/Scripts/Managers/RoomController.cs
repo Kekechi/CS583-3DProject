@@ -1,72 +1,252 @@
+using System;
 using System.Collections;
 using System.Collections.Generic;
 using UnityEngine;
-using UnityEngine.UI;
 
+/// <summary>
+/// Manages the room exploration phase, placement spots, and item placement
+/// Tracks progress and coordinates with GameManager
+/// </summary>
 public class RoomController : MonoBehaviour
 {
-    // [Header("Room Data")]
-    // public RoomData currentRoomData;
+    // Events
+    public event Action<PlacementSpot, GameObject> OnItemPlaced;
+    public event Action OnRoomComplete;
+    public event Action<int, int> OnProgressChanged; // (current, total)
 
-    [Header("Placement System")]
-    public Transform[] placementSpots; // 3 spots per room
-    public GameObject placementHighlight;
-    private int nextPlacementIndex = 0;
+    [Header("Spot References")]
+    [Tooltip("All placement spots in the room (assign in Inspector)")]
+    public List<PlacementSpot> allSpots;
 
-    [Header("Harmony Meter")]
-    public Slider harmonyMeterSlider;
-    public Image harmonyMeterFill;
-    public Color harmonyStartColor = Color.yellow;
-    public Color harmonyCompleteColor = Color.green;
-    private int totalItemsNeeded = 3;
+    [Header("Item Management")]
+    [Tooltip("Parent transform for placed items (for organization)")]
+    public Transform itemParent;
 
-    [Header("Lighting")]
-    public Light ambientLight;
-    public Light[] lanternLights;
+    [Header("Settings")]
+    [Tooltip("How many items required to complete the room")]
+    public int totalRequiredItems = 3;
 
-    [Header("Camera")]
-    public Camera mainCamera;
-    public Transform menuCameraPosition;
-    public Transform gameCameraPosition;
-    public Transform completionCameraPosition;
-    public float cameraTransitionSpeed = 2f;
+    [Header("Manager References")]
+    public GameManager gameManager;
+    public UIManager uiManager;
 
-    private Coroutine cameraTransitionCoroutine;
+    // Runtime state
+    private int itemsPlaced = 0;
+    private PlacementSpot currentTriggeredSpot;
+    private Dictionary<PlacementSpot, GameObject> placedItems;
+
+    void Awake()
+    {
+        placedItems = new Dictionary<PlacementSpot, GameObject>();
+    }
 
     void Start()
     {
         InitializeRoom();
     }
 
-    void InitializeRoom()
+    void OnEnable()
     {
-        nextPlacementIndex = 0;
-
-        if (harmonyMeterSlider != null)
-        {
-            harmonyMeterSlider.maxValue = totalItemsNeeded;
-            harmonyMeterSlider.value = 0;
-        }
-
-        if (placementHighlight != null)
-            placementHighlight.SetActive(false);
+        // Subscribe to all spot events
+        SubscribeToSpots();
     }
 
-    public void UpdateHarmonyMeter(int itemsPlaced)
+    void OnDisable()
     {
-        if (harmonyMeterSlider != null)
-        {
-            harmonyMeterSlider.value = itemsPlaced;
+        // Unsubscribe from spot events
+        UnsubscribeFromSpots();
+    }
 
-            // Update color based on progress
-            if (harmonyMeterFill != null)
+    /// <summary>
+    /// Initialize the room - subscribe to spots, show ghosts
+    /// </summary>
+    void InitializeRoom()
+    {
+        Debug.Log("[RoomController] Initializing room");
+
+        // Validate spots
+        if (allSpots == null || allSpots.Count == 0)
+        {
+            Debug.LogWarning("[RoomController] No placement spots assigned!");
+            return;
+        }
+
+        // Show all ghost visuals
+        foreach (var spot in allSpots)
+        {
+            if (spot != null)
             {
-                float t = (float)itemsPlaced / totalItemsNeeded;
-                harmonyMeterFill.color = Color.Lerp(harmonyStartColor, harmonyCompleteColor, t);
+                spot.ShowGhost(true);
             }
         }
 
-        if (itemsPlaced >= totalItemsNeeded)
+        Debug.Log($"[RoomController] Room initialized with {allSpots.Count} spots");
+    }
+
+    /// <summary>
+    /// Subscribe to all spot click events
+    /// </summary>
+    void SubscribeToSpots()
+    {
+        if (allSpots == null) return;
+
+        foreach (var spot in allSpots)
+        {
+            if (spot != null)
+            {
+                spot.OnClicked += HandleSpotClicked;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Unsubscribe from all spot events
+    /// </summary>
+    void UnsubscribeFromSpots()
+    {
+        if (allSpots == null) return;
+
+        foreach (var spot in allSpots)
+        {
+            if (spot != null)
+            {
+                spot.OnClicked -= HandleSpotClicked;
+            }
+        }
+    }
+
+    /// <summary>
+    /// Handle when a placement spot is clicked
+    /// Store the spot and request mini-game start from GameManager
+    /// </summary>
+    void HandleSpotClicked(PlacementSpot spot)
+    {
+        Debug.Log($"[RoomController] Spot clicked: {spot.gameObject.name} (triggers {spot.triggersGame})");
+
+        // Store which spot triggered this mini-game
+        currentTriggeredSpot = spot;
+
+        // Request GameManager to start the appropriate mini-game
+        if (gameManager != null && gameManager.miniGameController != null)
+        {
+            // Set the mini-game type and start
+            gameManager.miniGameController.currentMiniGame = spot.triggersGame;
+            gameManager.ChangeState(GameManager.GameState.PlayingMiniGame);
+        }
+        else
+        {
+            Debug.LogWarning("[RoomController] GameManager or MiniGameController reference missing!");
+        }
+    }
+
+    /// <summary>
+    /// Called by GameManager when mini-game completes
+    /// Places the item at the stored spot
+    /// </summary>
+    public void OnMiniGameComplete(GameObject itemPrefab)
+    {
+        if (currentTriggeredSpot == null)
+        {
+            Debug.LogWarning("[RoomController] No triggered spot stored!");
+            return;
+        }
+
+        if (itemPrefab == null)
+        {
+            Debug.LogWarning("[RoomController] Item prefab is null!");
+            return;
+        }
+
+        PlaceItemAtSpot(currentTriggeredSpot, itemPrefab);
+    }
+
+    /// <summary>
+    /// Place an item at the specified spot
+    /// </summary>
+    void PlaceItemAtSpot(PlacementSpot spot, GameObject itemPrefab)
+    {
+        // Instantiate the item at the spot's position
+        GameObject item = Instantiate(itemPrefab, spot.transform.position, spot.transform.rotation);
+
+        // Parent to item container for organization
+        if (itemParent != null)
+        {
+            item.transform.SetParent(itemParent);
+        }
+
+        // Mark the spot as occupied
+        spot.MarkOccupied(item);
+
+        // Track the placement
+        placedItems[spot] = item;
+        itemsPlaced++;
+
+        Debug.Log($"[RoomController] Item placed at {spot.gameObject.name}. Progress: {itemsPlaced}/{totalRequiredItems}");
+
+        // Fire events
+        OnItemPlaced?.Invoke(spot, item);
+        OnProgressChanged?.Invoke(itemsPlaced, totalRequiredItems);
+
+        // Update harmony meter
+        UpdateHarmonyMeter(itemsPlaced);
+
+        // Check for room completion
+        CheckRoomCompletion();
+
+        // Clear the stored spot
+        currentTriggeredSpot = null;
+    }
+
+    /// <summary>
+    /// Check if all required items are placed
+    /// </summary>
+    void CheckRoomCompletion()
+    {
+        if (itemsPlaced >= totalRequiredItems)
+        {
+            Debug.Log("[RoomController] Room complete!");
+            OnRoomComplete?.Invoke();
+
+            // Notify GameManager
+            if (gameManager != null)
+            {
+                gameManager.ChangeState(GameManager.GameState.RoomCompletion);
+            }
+        }
+    }
+
+    /// <summary>
+    /// Get current harmony percentage (0-1)
+    /// </summary>
+    public float GetHarmonyPercentage()
+    {
+        return (float)itemsPlaced / totalRequiredItems;
+    }
+
+    /// <summary>
+    /// Get number of items placed
+    /// </summary>
+    public int GetItemsPlaced()
+    {
+        return itemsPlaced;
+    }
+
+    /// <summary>
+    /// Check if a specific spot is occupied
+    /// </summary>
+    public bool IsSpotOccupied(PlacementSpot spot)
+    {
+        return spot != null && spot.isOccupied;
+    }
+
+    // ===== LEGACY METHODS (for GameManager compatibility) =====
+
+    public void UpdateHarmonyMeter(int itemsPlaced)
+    {
+        Debug.Log($"[RoomController] UpdateHarmonyMeter: {itemsPlaced}/{totalRequiredItems}");
+        // TODO: Update UI harmony meter when implemented
+
+        if (itemsPlaced >= totalRequiredItems)
         {
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlayHarmonyChime();
@@ -75,42 +255,9 @@ public class RoomController : MonoBehaviour
 
     public void ShowPlacementUI()
     {
-        if (nextPlacementIndex < placementSpots.Length)
-        {
-            // Highlight the next placement spot
-            if (placementHighlight != null)
-            {
-                placementHighlight.transform.position = placementSpots[nextPlacementIndex].position;
-                placementHighlight.SetActive(true);
-            }
-
-            // Move camera to placement view
-            MoveCameraTo(gameCameraPosition);
-
-            // Auto-place after a moment (simplified - you can add interaction later)
-            StartCoroutine(AutoPlaceItem());
-        }
-    }
-
-    IEnumerator AutoPlaceItem()
-    {
-        yield return new WaitForSeconds(1.5f);
-
-        PlaceItem();
-    }
-
-    void PlaceItem()
-    {
-        if (placementHighlight != null)
-            placementHighlight.SetActive(false);
-
-        if (AudioManager.Instance != null)
-            AudioManager.Instance.PlayItemPlaced();
-
-        nextPlacementIndex++;
-
-        if (GameManager.Instance != null)
-            GameManager.Instance.OnItemPlaced();
+        Debug.Log("[RoomController] ShowPlacementUI (not used in new flow)");
+        // New flow: placement happens automatically after mini-game
+        // This method kept for GameManager compatibility
     }
 
     public void PlayCompletionSequence()
@@ -120,74 +267,13 @@ public class RoomController : MonoBehaviour
 
     IEnumerator CompletionSequenceCoroutine()
     {
-        // Move camera to completion view
-        MoveCameraTo(completionCameraPosition);
+        Debug.Log("[RoomController] Playing completion sequence");
 
-        // Enhance lighting
-        if (ambientLight != null)
-        {
-            float originalIntensity = ambientLight.intensity;
-            float targetIntensity = originalIntensity * 1.5f;
-            float elapsed = 0f;
-            float duration = 2f;
-
-            while (elapsed < duration)
-            {
-                ambientLight.intensity = Mathf.Lerp(originalIntensity, targetIntensity, elapsed / duration);
-                elapsed += Time.deltaTime;
-                yield return null;
-            }
-        }
-
-        // Turn on lantern lights
-        foreach (Light lantern in lanternLights)
-        {
-            if (lantern != null)
-                lantern.enabled = true;
-        }
-
+        // TODO: Add completion effects (lighting, particles, etc.)
         yield return new WaitForSeconds(3f);
 
         // Show summary
-        if (GameManager.Instance != null && GameManager.Instance.uiManager != null)
-            GameManager.Instance.uiManager.ShowSummary();
+        if (uiManager != null)
+            uiManager.ShowSummary();
     }
-
-    public void MoveCameraTo(Transform targetPosition)
-    {
-        if (cameraTransitionCoroutine != null)
-            StopCoroutine(cameraTransitionCoroutine);
-
-        cameraTransitionCoroutine = StartCoroutine(CameraTransitionCoroutine(targetPosition));
-    }
-
-    IEnumerator CameraTransitionCoroutine(Transform targetPosition)
-    {
-        if (mainCamera == null || targetPosition == null)
-            yield break;
-
-        Transform camTransform = mainCamera.transform;
-        Vector3 startPos = camTransform.position;
-        Quaternion startRot = camTransform.rotation;
-        float elapsed = 0f;
-        float duration = 1f / cameraTransitionSpeed;
-
-        while (elapsed < duration)
-        {
-            camTransform.position = Vector3.Lerp(startPos, targetPosition.position, elapsed / duration);
-            camTransform.rotation = Quaternion.Lerp(startRot, targetPosition.rotation, elapsed / duration);
-            elapsed += Time.deltaTime;
-            yield return null;
-        }
-
-        camTransform.position = targetPosition.position;
-        camTransform.rotation = targetPosition.rotation;
-    }
-
-    // public void LoadRoomData(RoomData data)
-    // {
-    //     // currentRoomData = data;
-    //     // Apply room-specific settings (lighting, theme, etc.)
-    //     // This will be expanded when ScriptableObjects are implemented
-    // }
 }

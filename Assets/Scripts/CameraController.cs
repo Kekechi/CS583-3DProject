@@ -16,9 +16,27 @@ public class CameraController : MonoBehaviour
   [Tooltip("Easing curve for smooth transitions")]
   public AnimationCurve transitionCurve = AnimationCurve.EaseInOut(0, 0, 1, 1);
 
+  [Header("Orbit Controls")]
+  [Tooltip("Mouse sensitivity for camera rotation")]
+  public float mouseSensitivity = 2f;
+
+  [Tooltip("Minimum horizontal rotation angle (degrees)")]
+  public float minHorizontalAngle = -90f;
+
+  [Tooltip("Maximum horizontal rotation angle (degrees)")]
+  public float maxHorizontalAngle = 90f;
+
+  [Tooltip("Minimum vertical rotation angle (degrees)")]
+  public float minVerticalAngle = -30f;
+
+  [Tooltip("Maximum vertical rotation angle (degrees)")]
+  public float maxVerticalAngle = 30f;
+
   public bool IsMoving { get; private set; }
 
   private Coroutine currentTransition;
+  private float currentYaw = 0f;   // Horizontal rotation
+  private float currentPitch = 0f; // Vertical rotation
 
   [ContextMenu("Test Room")]
   void TestRoom()
@@ -30,6 +48,30 @@ public class CameraController : MonoBehaviour
   void TestLantern()
   {
     MoveTo(lanternGamePosition);
+  }
+
+  void Update()
+  {
+    // Only allow controls when not transitioning
+    if (!IsMoving)
+    {
+      // Right-click to pan camera
+      if (Input.GetMouseButton(1))
+      {
+        float mouseX = Input.GetAxis("Mouse X") * mouseSensitivity;
+        float mouseY = Input.GetAxis("Mouse Y") * mouseSensitivity;
+
+        currentYaw += mouseX;
+        currentPitch -= mouseY; // Inverted for natural feel
+
+        // Clamp rotation angles
+        currentYaw = Mathf.Clamp(currentYaw, minHorizontalAngle, maxHorizontalAngle);
+        currentPitch = Mathf.Clamp(currentPitch, minVerticalAngle, maxVerticalAngle);
+
+        // Apply rotation (position stays fixed, only rotation changes)
+        transform.rotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
+      }
+    }
   }
 
   /// <summary>
@@ -81,6 +123,15 @@ public class CameraController : MonoBehaviour
     // Snap to final position
     transform.position = endPosition;
     transform.rotation = endRotation;
+
+    // Sync rotation tracking with new rotation
+    Vector3 eulerAngles = endRotation.eulerAngles;
+    currentYaw = eulerAngles.y;
+    currentPitch = eulerAngles.x;
+
+    // Normalize angles to -180 to 180 range
+    if (currentYaw > 180f) currentYaw -= 360f;
+    if (currentPitch > 180f) currentPitch -= 360f;
 
     IsMoving = false;
     currentTransition = null;

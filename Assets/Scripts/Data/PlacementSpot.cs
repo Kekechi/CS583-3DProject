@@ -13,7 +13,7 @@ public class PlacementSpot : MonoBehaviour
   public event Action<PlacementSpot> OnClicked;
   [Header("Spot Configuration")]
   [Tooltip("Which mini-game does this spot trigger when clicked")]
-  public MiniGameController.MiniGameType triggersGame;
+  public MiniGameType triggersGame;
 
   [Header("Visual References")]
   [Tooltip("Reference to the ghost visual child GameObject")]

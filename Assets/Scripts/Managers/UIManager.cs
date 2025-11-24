@@ -85,20 +85,20 @@ public class UIManager : MonoBehaviour
     // Button callbacks
     void OnStartButtonClicked()
     {
-        if (GameManager.Instance != null)
-            GameManager.Instance.StartGame();
+        Debug.Log("[UIManager] Start button clicked - Not implemented yet");
+        // TODO: Implement start game flow when menu system is ready
     }
 
     void OnResumeButtonClicked()
     {
-        if (GameManager.Instance != null)
-            GameManager.Instance.ResumeGame();
+        Debug.Log("[UIManager] Resume button clicked - Not implemented yet");
+        // TODO: Implement resume game flow when pause system is ready
     }
 
     void OnMainMenuButtonClicked()
     {
-        if (GameManager.Instance != null)
-            GameManager.Instance.ReturnToMainMenu();
+        Debug.Log("[UIManager] Main menu button clicked - Not implemented yet");
+        // TODO: Implement return to main menu flow when menu system is ready
     }
 
     void OnQuitButtonClicked()

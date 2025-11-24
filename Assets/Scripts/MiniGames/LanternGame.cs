@@ -53,7 +53,7 @@ public class LanternGame : MonoBehaviour
     public void StartGame()
     {
         isPlaying = true;
-        brightness = 0.5f;
+        brightness = 0f; // Start at minimum (player builds up from zero)
         timeInHarmony = 0f;
 
         SpawnLantern();
@@ -67,6 +67,29 @@ public class LanternGame : MonoBehaviour
         OnGameStarted?.Invoke();
 
         Debug.Log("[LanternGame] Game started");
+    }
+
+    /// <summary>
+    /// Stop the game and hide all UI elements
+    /// Called by MiniGameController during cleanup
+    /// </summary>
+    public void StopGame()
+    {
+        isPlaying = false;
+
+        // Hide all lantern-specific UI
+        if (ui != null)
+        {
+            ui.Hide();
+        }
+
+        // Clean up spawned lantern
+        CleanupLantern();
+
+        // Deactivate this game object
+        gameObject.SetActive(false);
+
+        Debug.Log("[LanternGame] Game stopped and UI hidden");
     }
 
     void Update()
@@ -119,24 +142,6 @@ public class LanternGame : MonoBehaviour
     {
         return brightness >= harmonyZoneMin && brightness <= harmonyZoneMax;
     }
-
-    /// <summary>
-    /// Stop the game and clean up
-    /// </summary>
-    public void StopGame()
-    {
-        isPlaying = false;
-
-        if (ui != null)
-        {
-            ui.Hide();
-        }
-
-        CleanupLantern();
-
-        Debug.Log("[LanternGame] Game stopped");
-    }
-
     /// <summary>
     /// Spawn the lantern prefab and get its visual component
     /// </summary>
@@ -181,7 +186,8 @@ public class LanternGame : MonoBehaviour
         {
             lanternInstance = spawnedLantern,
             finalBrightness = brightness,
-            completionTime = Time.time
+            CompletionTime = Time.time,
+            adjustmentsMade = 0 // TODO: Track this if needed
         };
 
         OnGameCompleted?.Invoke(result);
@@ -206,12 +212,17 @@ public class LanternGame : MonoBehaviour
 /// Data container for completed lantern mini-game result
 /// </summary>
 [Serializable]
-public class LanternResult
+public class LanternResult : MiniGameResult
 {
+    public override GameObject ItemInstance => lanternInstance;
+    public override MiniGameType GameType => MiniGameType.Lantern;
+
+    // Lantern-specific data
     public GameObject lanternInstance;
     public float finalBrightness;
-    public float completionTime;
+    public int adjustmentsMade;
 
+    // CompletionTime inherited from base class
     // Future customization data can go here
     // public Color paperColor;
     // public int patternID;

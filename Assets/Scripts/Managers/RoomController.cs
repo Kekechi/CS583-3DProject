@@ -12,7 +12,6 @@ public class RoomController : MonoBehaviour
     // Events
     public event Action<PlacementSpot, GameObject> OnItemPlaced;
     public event Action OnRoomComplete;
-    public event Action<int, int> OnProgressChanged; // (current, total)
 
     [Header("Spot References")]
     [Tooltip("All placement spots in the room (assign in Inspector)")]
@@ -27,8 +26,7 @@ public class RoomController : MonoBehaviour
     public int totalRequiredItems = 3;
 
     [Header("Manager References")]
-    public GameManager gameManager;
-    public UIManager uiManager;
+    public GameManager gameManager; // Only for StartMiniGame - consider making this an event too
 
     // Runtime state
     private int itemsPlaced = 0;
@@ -49,12 +47,24 @@ public class RoomController : MonoBehaviour
     {
         // Subscribe to all spot events
         SubscribeToSpots();
+
+        // Subscribe to GameManager events
+        if (gameManager != null)
+        {
+            gameManager.OnItemReadyToPlace += HandleItemReadyToPlace;
+        }
     }
 
     void OnDisable()
     {
         // Unsubscribe from spot events
         UnsubscribeFromSpots();
+
+        // Unsubscribe from GameManager events
+        if (gameManager != null)
+        {
+            gameManager.OnItemReadyToPlace -= HandleItemReadyToPlace;
+        }
     }
 
     /// <summary>
@@ -127,23 +137,21 @@ public class RoomController : MonoBehaviour
         currentTriggeredSpot = spot;
 
         // Request GameManager to start the appropriate mini-game
-        if (gameManager != null && gameManager.miniGameController != null)
+        if (gameManager != null)
         {
-            // Set the mini-game type and start
-            gameManager.miniGameController.currentMiniGame = spot.triggersGame;
-            gameManager.ChangeState(GameManager.GameState.PlayingMiniGame);
+            gameManager.StartMiniGame(spot.triggersGame);
         }
         else
         {
-            Debug.LogWarning("[RoomController] GameManager or MiniGameController reference missing!");
+            Debug.LogWarning("[RoomController] GameManager reference missing!");
         }
     }
 
     /// <summary>
-    /// Called by GameManager when mini-game completes
+    /// Event handler: Called when GameManager has an item ready to place
     /// Places the item at the stored spot
     /// </summary>
-    public void OnMiniGameComplete(GameObject itemPrefab)
+    void HandleItemReadyToPlace(GameObject itemPrefab)
     {
         if (currentTriggeredSpot == null)
         {
@@ -183,9 +191,8 @@ public class RoomController : MonoBehaviour
 
         Debug.Log($"[RoomController] Item placed at {spot.gameObject.name}. Progress: {itemsPlaced}/{totalRequiredItems}");
 
-        // Fire events
+        // Fire event
         OnItemPlaced?.Invoke(spot, item);
-        OnProgressChanged?.Invoke(itemsPlaced, totalRequiredItems);
 
         // Update harmony meter
         UpdateHarmonyMeter(itemsPlaced);
@@ -206,12 +213,7 @@ public class RoomController : MonoBehaviour
         {
             Debug.Log("[RoomController] Room complete!");
             OnRoomComplete?.Invoke();
-
-            // Notify GameManager
-            if (gameManager != null)
-            {
-                gameManager.ChangeState(GameManager.GameState.RoomCompletion);
-            }
+            // GameManager subscribes to OnRoomComplete event and changes its own state
         }
     }
 
@@ -251,29 +253,5 @@ public class RoomController : MonoBehaviour
             if (AudioManager.Instance != null)
                 AudioManager.Instance.PlayHarmonyChime();
         }
-    }
-
-    public void ShowPlacementUI()
-    {
-        Debug.Log("[RoomController] ShowPlacementUI (not used in new flow)");
-        // New flow: placement happens automatically after mini-game
-        // This method kept for GameManager compatibility
-    }
-
-    public void PlayCompletionSequence()
-    {
-        StartCoroutine(CompletionSequenceCoroutine());
-    }
-
-    IEnumerator CompletionSequenceCoroutine()
-    {
-        Debug.Log("[RoomController] Playing completion sequence");
-
-        // TODO: Add completion effects (lighting, particles, etc.)
-        yield return new WaitForSeconds(3f);
-
-        // Show summary
-        if (uiManager != null)
-            uiManager.ShowSummary();
     }
 }

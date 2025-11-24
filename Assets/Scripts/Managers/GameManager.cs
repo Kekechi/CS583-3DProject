@@ -7,31 +7,24 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager Instance { get; private set; }
 
-    // Events for external systems to trigger
-    public static event Action OnMiniGameCompleted;
-    public static event Action OnItemPlacedEvent;
-    public static event Action OnPauseRequested;
+    // Events
+    public event Action<GameState, GameState> OnStateChanged;
+    public event Action<GameObject> OnItemReadyToPlace;
 
     public enum GameState
     {
-        MainMenu,
-        SelectingRoom,
         PlayingMiniGame,
         PlacingItem,
-        RoomCompletion,
-        Paused
+        RoomCompletion
     }
 
     public GameState CurrentState { get; private set; }
 
     [Header("References")]
-    public UIManager uiManager;
-    public AudioManager audioManager;
     public RoomController roomController;
     public MiniGameController miniGameController;
 
     [Header("Room Progress")]
-    public int currentRoomIndex = 0;
     public int itemsPlacedInCurrentRoom = 0;
 
     void Awake()
@@ -52,142 +45,160 @@ public class GameManager : MonoBehaviour
     void OnEnable()
     {
         // Subscribe to events
-        // OnMiniGameCompleted += HandleMiniGameComplete; // Now handled by MiniGameController transition
-        OnItemPlacedEvent += HandleItemPlaced;
-        OnPauseRequested += PauseGame;
-
-        // Subscribe to MiniGameController's completion event
         if (miniGameController != null)
-            miniGameController.OnMiniGameFullyComplete += HandleMiniGameFullyComplete;
+            miniGameController.OnMiniGameComplete += HandleMiniGameComplete;
+
+        if (roomController != null)
+        {
+            roomController.OnItemPlaced += HandleItemPlaced;
+            roomController.OnRoomComplete += HandleRoomComplete;
+        }
     }
 
     void OnDisable()
     {
         // Unsubscribe to prevent memory leaks
-        // OnMiniGameCompleted -= HandleMiniGameComplete;
-        OnItemPlacedEvent -= HandleItemPlaced;
-        OnPauseRequested -= PauseGame;
-
         if (miniGameController != null)
-            miniGameController.OnMiniGameFullyComplete -= HandleMiniGameFullyComplete;
+            miniGameController.OnMiniGameComplete -= HandleMiniGameComplete;
+
+        if (roomController != null)
+        {
+            roomController.OnItemPlaced -= HandleItemPlaced;
+            roomController.OnRoomComplete -= HandleRoomComplete;
+        }
     }
 
     void Start()
     {
-        ChangeState(GameState.MainMenu);
+        ChangeState(GameState.PlacingItem);
     }
 
     public void ChangeState(GameState newState)
     {
+        GameState oldState = CurrentState;
         CurrentState = newState;
-        Debug.Log($"Game State Changed to: {newState}");
 
-        switch (newState)
+        Debug.Log($"[GameManager] State changed: {oldState} → {newState}");
+        OnStateChanged?.Invoke(oldState, newState);
+    }
+
+    /// <summary>
+    /// Called by MiniGameController when a mini-game completes
+    /// Extracts the item and fires event for RoomController
+    /// </summary>
+    void HandleMiniGameComplete(MiniGameResult result)
+    {
+        Debug.Log($"[GameManager] Mini-game complete: {result.GameType}, time: {result.CompletionTime:F2}s");
+
+        // Extract item prefab from result
+        GameObject itemPrefab = result.ItemInstance;
+
+        if (itemPrefab != null)
         {
-            case GameState.MainMenu:
-                HandleMainMenu();
-                break;
-            case GameState.SelectingRoom:
-                HandleRoomSelection();
-                break;
-            case GameState.PlayingMiniGame:
-                HandleMiniGame();
-                break;
-            case GameState.PlacingItem:
-                HandlePlacement();
-                break;
-            case GameState.RoomCompletion:
-                HandleRoomCompletion();
-                break;
-            case GameState.Paused:
-                HandlePause();
-                break;
-        }
-    }
-
-    void HandleMainMenu()
-    {
-        if (uiManager != null) uiManager.ShowMainMenu();
-    }
-
-    void HandleRoomSelection()
-    {
-        if (uiManager != null) uiManager.ShowRoomSelection();
-    }
-
-    void HandleMiniGame()
-    {
-        if (miniGameController != null) miniGameController.StartCurrentMiniGame();
-    }
-
-    void HandlePlacement()
-    {
-        if (roomController != null) roomController.ShowPlacementUI();
-    }
-
-    void HandleRoomCompletion()
-    {
-        if (roomController != null) roomController.PlayCompletionSequence();
-    }
-
-    void HandlePause()
-    {
-        Time.timeScale = 0f;
-        if (uiManager != null) uiManager.ShowPauseMenu();
-    }
-
-    public void StartGame()
-    {
-        currentRoomIndex = 0;
-        itemsPlacedInCurrentRoom = 0;
-        ChangeState(GameState.SelectingRoom);
-    }
-
-    // Event handlers (private - triggered by events)
-    private void HandleMiniGameFullyComplete(object result)
-    {
-        Debug.Log($"[GameManager] Mini-game fully complete with result: {result?.GetType().Name}");
-
-        // Store result for placement (can be accessed by RoomController)
-        // For now, just transition to placement state
-        // RoomController will handle the actual placement UI and logic
-
-        ChangeState(GameState.PlacingItem);
-    }
-
-    private void HandleItemPlaced()
-    {
-        itemsPlacedInCurrentRoom++;
-        if (roomController != null) roomController.UpdateHarmonyMeter(itemsPlacedInCurrentRoom);
-
-        if (itemsPlacedInCurrentRoom >= 3) // 3 items per room (Origami, Calligraphy, Lantern)
-        {
-            ChangeState(GameState.RoomCompletion);
+            ChangeState(GameState.PlacingItem);
+            OnItemReadyToPlace?.Invoke(itemPrefab);
+            Debug.Log($"[GameManager] Item ready to place: {itemPrefab.name}");
         }
         else
         {
-            ChangeState(GameState.PlayingMiniGame);
+            Debug.LogWarning("[GameManager] Result has no ItemInstance!");
         }
     }
 
-    // Public methods for compatibility (invoke events)
-    public void OnMiniGameComplete() => OnMiniGameCompleted?.Invoke();
-    public void OnItemPlaced() => OnItemPlacedEvent?.Invoke();
-
-    public void PauseGame()
+    /// <summary>
+    /// Start a mini-game of the specified type
+    /// Called by RoomController when a placement spot is clicked
+    /// </summary>
+    public void StartMiniGame(MiniGameType gameType)
     {
-        ChangeState(GameState.Paused);
+        Debug.Log($"[GameManager] Starting mini-game: {gameType}");
+
+        if (miniGameController != null)
+        {
+            ChangeState(GameState.PlayingMiniGame);
+            miniGameController.StartMiniGame(gameType);
+        }
+        else
+        {
+            Debug.LogError("[GameManager] MiniGameController reference is missing!");
+        }
     }
 
-    public void ResumeGame()
+    void HandleItemPlaced(PlacementSpot spot, GameObject item)
     {
-        Time.timeScale = 1f;
-        ChangeState(GameState.PlayingMiniGame);
+        itemsPlacedInCurrentRoom++;
+        Debug.Log($"[GameManager] Item placed: {itemsPlacedInCurrentRoom}/3");
     }
 
-    public void ReturnToMainMenu()
+    void HandleRoomComplete()
     {
-        Time.timeScale = 1f;
-        ChangeState(GameState.MainMenu);
+        Debug.Log("[GameManager] Room complete! All items placed.");
+        ChangeState(GameState.RoomCompletion);
+        // Future: Transition to next room, show completion UI, etc.
+    }
+
+    // ========== TESTING CONTEXT MENU ==========
+
+    [ContextMenu("Test: Start Room Placement")]
+    void TestStartRoomPlacement()
+    {
+        Debug.Log("[TEST] Starting room placement mode");
+        itemsPlacedInCurrentRoom = 0;
+        ChangeState(GameState.PlacingItem);
+    }
+
+    [ContextMenu("Test: Reset Room Progress")]
+    void TestResetRoomProgress()
+    {
+        Debug.Log("[TEST] Resetting room progress");
+        itemsPlacedInCurrentRoom = 0;
+
+        if (roomController != null)
+        {
+            // Reset all placement spots
+            foreach (var spot in roomController.allSpots)
+            {
+                if (spot != null)
+                {
+                    spot.ClearPlacement();
+                }
+            }
+        }
+    }
+
+    [ContextMenu("Test: Start Lantern Game")]
+    void TestStartLanternGame()
+    {
+        Debug.Log("[TEST] Starting Lantern mini-game");
+        StartMiniGame(MiniGameType.Lantern);
+
+        if (miniGameController != null)
+        {
+            miniGameController.StartMiniGame(MiniGameType.Lantern);
+        }
+    }
+
+    [ContextMenu("Test: Start Origami Game")]
+    void TestStartOrigamiGame()
+    {
+        Debug.Log("[TEST] Starting Origami mini-game");
+        StartMiniGame(MiniGameType.Origami);
+
+        if (miniGameController != null)
+        {
+            miniGameController.StartMiniGame(MiniGameType.Origami);
+        }
+    }
+
+    [ContextMenu("Test: Start Calligraphy Game")]
+    void TestCalligraphyGame()
+    {
+        Debug.Log("[TEST] Starting Calligraphy mini-game");
+        StartMiniGame(MiniGameType.Calligraphy);
+
+        if (miniGameController != null)
+        {
+            miniGameController.StartMiniGame(MiniGameType.Calligraphy);
+        }
     }
 }

@@ -1,8 +1,13 @@
+using System;
 using System.Collections;
 using UnityEngine;
 
 public class CameraController : MonoBehaviour
 {
+  // Events
+  public event Action OnMovementStarted;
+  public event Action OnMovementComplete;
+
   [Header("Camera Positions")]
   public Transform roomViewPosition;      // Overview of the room
   public Transform lanternGamePosition;   // Close-up on lantern table
@@ -100,6 +105,7 @@ public class CameraController : MonoBehaviour
   IEnumerator TransitionToTarget(Transform target)
   {
     IsMoving = true;
+    OnMovementStarted?.Invoke();
 
     Vector3 startPosition = transform.position;
     Quaternion startRotation = transform.rotation;
@@ -137,5 +143,6 @@ public class CameraController : MonoBehaviour
     currentTransition = null;
 
     Debug.Log($"[CameraController] Arrived at {target.name}");
+    OnMovementComplete?.Invoke();
   }
 }

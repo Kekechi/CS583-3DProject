@@ -5,16 +5,8 @@ using UnityEngine;
 
 public class MiniGameController : MonoBehaviour
 {
-    public enum MiniGameType
-    {
-        Origami,
-        Calligraphy,
-        Lantern
-    }
-
     [Header("Current Mini-Game")]
     public MiniGameType currentMiniGame;
-    private int miniGameRotationIndex = 0;
 
     [Header("Mini-Game References")]
     public OrigamiGame origamiGame;
@@ -23,7 +15,6 @@ public class MiniGameController : MonoBehaviour
 
     [Header("Transition References")]
     public CameraController cameraController;
-    public UIManager uiManager;
 
     [Header("Transition Settings")]
     [Tooltip("How long to display success panel before transitioning back")]
@@ -33,17 +24,25 @@ public class MiniGameController : MonoBehaviour
     public bool allowSkip = true;
 
     // Events
-    public event Action<object> OnMiniGameFullyComplete;
+    public event Action<MiniGameResult> OnMiniGameComplete;
 
     // State
     private bool isTransitioning = false;
-    private object currentMiniGameResult;
+    private MiniGameResult currentMiniGameResult;
     private bool skipRequested = false;
+    private MiniGameType? pendingGameActivation = null; // Game to activate when camera arrives
+
+    /// <summary>
+    /// Check if currently transitioning between mini-game and room
+    /// </summary>
+    public bool IsTransitioning => isTransitioning;
 
     void Start()
     {
         // Hide all mini-games initially
-        DeactivateAllMiniGames();
+        if (origamiGame != null) origamiGame.gameObject.SetActive(false);
+        if (calligraphyGame != null) calligraphyGame.gameObject.SetActive(false);
+        if (lanternGame != null) lanternGame.gameObject.SetActive(false);
     }
 
     void OnEnable()
@@ -51,6 +50,10 @@ public class MiniGameController : MonoBehaviour
         // Subscribe to mini-game completion events
         if (lanternGame != null)
             lanternGame.OnGameCompleted += HandleLanternComplete;
+
+        // Subscribe to camera events
+        if (cameraController != null)
+            cameraController.OnMovementComplete += HandleCameraArrived;
 
         // TODO: Subscribe to origami and calligraphy when implemented
         // if (origamiGame != null)
@@ -65,6 +68,10 @@ public class MiniGameController : MonoBehaviour
         if (lanternGame != null)
             lanternGame.OnGameCompleted -= HandleLanternComplete;
 
+        // Unsubscribe from camera events
+        if (cameraController != null)
+            cameraController.OnMovementComplete -= HandleCameraArrived;
+
         // TODO: Unsubscribe from other mini-games
     }
 
@@ -77,16 +84,38 @@ public class MiniGameController : MonoBehaviour
         }
     }
 
-    public void StartCurrentMiniGame()
+    /// <summary>
+    /// Start a specific mini-game by type
+    /// Called by GameManager when player clicks a placement spot
+    /// Camera will fire event when it arrives, then we activate the game
+    /// </summary>
+    public void StartMiniGame(MiniGameType gameType)
     {
-        // Cycle through mini-games in order
-        MiniGameType[] gameOrder = { MiniGameType.Origami, MiniGameType.Calligraphy, MiniGameType.Lantern };
-        currentMiniGame = gameOrder[miniGameRotationIndex % 3];
-        miniGameRotationIndex++;
+        currentMiniGame = gameType;
+        Debug.Log($"[MiniGameController] Starting {gameType} mini-game");
 
-        DeactivateAllMiniGames();
-        MoveCameraToMiniGame(currentMiniGame);
-        ActivateMiniGame(currentMiniGame);
+        // Stop any currently running game
+        StopCurrentMiniGame();
+
+        // Set pending activation (will trigger when camera event fires)
+        pendingGameActivation = gameType;
+
+        // Move camera (HandleCameraArrived will activate game when done)
+        MoveCameraToMiniGame(gameType);
+    }
+
+    /// <summary>
+    /// Event handler: Called when camera movement completes
+    /// Activates the pending mini-game if one is waiting
+    /// </summary>
+    void HandleCameraArrived()
+    {
+        if (pendingGameActivation.HasValue)
+        {
+            Debug.Log($"[MiniGameController] Camera arrived, activating {pendingGameActivation.Value} UI");
+            ActivateMiniGame(pendingGameActivation.Value);
+            pendingGameActivation = null;
+        }
     }
 
     void MoveCameraToMiniGame(MiniGameType gameType)
@@ -139,11 +168,28 @@ public class MiniGameController : MonoBehaviour
         Debug.Log($"Started {gameType} mini-game");
     }
 
-    void DeactivateAllMiniGames()
+    /// <summary>
+    /// Stop the currently active mini-game and let it clean up its own UI
+    /// </summary>
+    void StopCurrentMiniGame()
     {
-        if (origamiGame != null) origamiGame.gameObject.SetActive(false);
-        if (calligraphyGame != null) calligraphyGame.gameObject.SetActive(false);
-        if (lanternGame != null) lanternGame.gameObject.SetActive(false);
+        switch (currentMiniGame)
+        {
+            case MiniGameType.Lantern:
+                if (lanternGame != null)
+                    lanternGame.StopGame();
+                break;
+
+            case MiniGameType.Origami:
+                if (origamiGame != null && origamiGame.gameObject.activeSelf)
+                    origamiGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
+                break;
+
+            case MiniGameType.Calligraphy:
+                if (calligraphyGame != null && calligraphyGame.gameObject.activeSelf)
+                    calligraphyGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
+                break;
+        }
     }
 
     /// <summary>
@@ -157,7 +203,7 @@ public class MiniGameController : MonoBehaviour
     /// <summary>
     /// Orchestrate the full post-game transition: success display → camera return → cleanup
     /// </summary>
-    IEnumerator HandleMiniGameCompletion(object result)
+    IEnumerator HandleMiniGameCompletion(MiniGameResult result)
     {
         if (isTransitioning)
         {
@@ -169,51 +215,55 @@ public class MiniGameController : MonoBehaviour
         currentMiniGameResult = result;
         skipRequested = false;
 
-        Debug.Log($"[MiniGameController] Starting transition for {currentMiniGame}");
-
-        // Phase 1: Show success UI (already shown by mini-game)
-        // Just wait for display time or skip
-        float elapsed = 0f;
-        while (elapsed < successDisplayTime && !skipRequested)
+        try
         {
-            elapsed += Time.deltaTime;
-            yield return null;
+            Debug.Log($"[MiniGameController] Starting transition for {currentMiniGame}");
+
+            // Phase 1: Show success UI (already shown by mini-game)
+            // Just wait for display time or skip
+            float elapsed = 0f;
+            while (elapsed < successDisplayTime && !skipRequested)
+            {
+                elapsed += Time.deltaTime;
+                yield return null;
+            }
+
+            Debug.Log($"[MiniGameController] Success displayed for {elapsed:F2}s (skipped: {skipRequested})");
+
+            // Phase 2: Hide mini-game UI before camera transition
+            // Tell the specific game to stop and clean itself up
+            StopCurrentMiniGame();
+
+            Debug.Log("[MiniGameController] Mini-game UI hidden");
+
+            // Phase 3: Move camera back to room
+            if (cameraController != null)
+            {
+                cameraController.MoveTo(cameraController.roomViewPosition);
+
+                // Wait for camera to finish moving
+                yield return new WaitUntil(() => !cameraController.IsMoving);
+            }
+
+            Debug.Log("[MiniGameController] Camera returned to room");
+
+            // Phase 4: Fire completion event
+            if (currentMiniGameResult != null)
+            {
+                OnMiniGameComplete?.Invoke(currentMiniGameResult);
+                Debug.Log($"[MiniGameController] Transition complete, fired OnMiniGameComplete event");
+            }
+            else
+            {
+                Debug.LogWarning("[MiniGameController] Cannot complete transition - result is null");
+            }
         }
-
-        Debug.Log($"[MiniGameController] Success displayed for {elapsed:F2}s (skipped: {skipRequested})");
-
-        // Phase 2: Move camera back to room (success UI still visible during camera move)
-        if (cameraController != null)
+        finally
         {
-            cameraController.MoveTo(cameraController.roomViewPosition);
-
-            // Wait for camera to finish moving
-            yield return new WaitUntil(() => !cameraController.IsMoving);
+            // Always reset state, even if coroutine errors or stops early
+            isTransitioning = false;
+            skipRequested = false;
+            currentMiniGameResult = null;
         }
-
-        Debug.Log("[MiniGameController] Camera returned to room");
-
-        // Phase 3: Cleanup mini-game (hide UI, deactivate game object)
-        DeactivateAllMiniGames();
-
-        // Phase 4: Notify GameManager that transition is complete
-        isTransitioning = false;
-        OnMiniGameFullyComplete?.Invoke(currentMiniGameResult);
-
-        Debug.Log($"[MiniGameController] Transition complete, result passed to GameManager");
-    }
-
-    /// <summary>
-    /// Old method for compatibility - no longer used, transitions now automatic
-    /// </summary>
-    [System.Obsolete("Use automatic transition via OnGameCompleted events instead")]
-    public void OnMiniGameComplete()
-    {
-        Debug.LogWarning("[MiniGameController] OnMiniGameComplete() is obsolete - transitions are now automatic");
-    }
-
-    public void ResetMiniGameRotation()
-    {
-        miniGameRotationIndex = 0;
     }
 }

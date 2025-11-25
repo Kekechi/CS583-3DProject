@@ -38,12 +38,26 @@ public class RoomController : MonoBehaviour
         placedItems = new Dictionary<PlacementSpot, GameObject>();
     }
 
-    void Start()
+    void OnEnable()
     {
-        InitializeRoom();
+        Debug.Log("[RoomController] OnEnable called");
+        // Don't subscribe to events here - serialized refs might not be assigned yet
     }
 
-    void OnEnable()
+    void OnDisable()
+    {
+        Debug.Log("[RoomController] OnDisable called");
+        UnsubscribeFromEvents();
+    }
+
+    void Start()
+    {
+        Debug.Log("[RoomController] Start called");
+        InitializeRoom();
+        SubscribeToEvents();
+    }
+
+    void SubscribeToEvents()
     {
         // Subscribe to all spot events
         SubscribeToSpots();
@@ -52,10 +66,15 @@ public class RoomController : MonoBehaviour
         if (gameManager != null)
         {
             gameManager.OnItemReadyToPlace += HandleItemReadyToPlace;
+            Debug.Log("[RoomController] Subscribed to GameManager.OnItemReadyToPlace");
+        }
+        else
+        {
+            Debug.LogError("[RoomController] gameManager reference is NULL in Start!");
         }
     }
 
-    void OnDisable()
+    void UnsubscribeFromEvents()
     {
         // Unsubscribe from spot events
         UnsubscribeFromSpots();
@@ -64,6 +83,7 @@ public class RoomController : MonoBehaviour
         if (gameManager != null)
         {
             gameManager.OnItemReadyToPlace -= HandleItemReadyToPlace;
+            Debug.Log("[RoomController] Unsubscribed from GameManager.OnItemReadyToPlace");
         }
     }
 
@@ -153,6 +173,8 @@ public class RoomController : MonoBehaviour
     /// </summary>
     void HandleItemReadyToPlace(GameObject itemPrefab)
     {
+        Debug.Log($"[RoomController] HandleItemReadyToPlace called with item: {(itemPrefab != null ? itemPrefab.name : "NULL")}");
+
         if (currentTriggeredSpot == null)
         {
             Debug.LogWarning("[RoomController] No triggered spot stored!");

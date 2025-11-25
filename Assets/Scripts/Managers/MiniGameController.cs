@@ -39,21 +39,51 @@ public class MiniGameController : MonoBehaviour
 
     void Start()
     {
+        Debug.Log("[MiniGameController] Start called");
+
         // Hide all mini-games initially
         if (origamiGame != null) origamiGame.gameObject.SetActive(false);
         if (calligraphyGame != null) calligraphyGame.gameObject.SetActive(false);
         if (lanternGame != null) lanternGame.gameObject.SetActive(false);
+
+        SubscribeToEvents();
     }
 
     void OnEnable()
     {
+        Debug.Log("[MiniGameController] OnEnable called");
+        // Don't subscribe to events here - serialized refs might not be assigned yet
+    }
+
+    void OnDisable()
+    {
+        Debug.Log("[MiniGameController] OnDisable called");
+        UnsubscribeFromEvents();
+    }
+
+    void SubscribeToEvents()
+    {
         // Subscribe to mini-game completion events
         if (lanternGame != null)
+        {
             lanternGame.OnGameCompleted += HandleLanternComplete;
+            Debug.Log("[MiniGameController] Subscribed to LanternGame events");
+        }
+        else
+        {
+            Debug.LogWarning("[MiniGameController] lanternGame is NULL in Start!");
+        }
 
         // Subscribe to camera events
         if (cameraController != null)
+        {
             cameraController.OnMovementComplete += HandleCameraArrived;
+            Debug.Log("[MiniGameController] Subscribed to CameraController events");
+        }
+        else
+        {
+            Debug.LogError("[MiniGameController] cameraController is NULL in Start!");
+        }
 
         // TODO: Subscribe to origami and calligraphy when implemented
         // if (origamiGame != null)
@@ -62,15 +92,21 @@ public class MiniGameController : MonoBehaviour
         //     calligraphyGame.OnGameCompleted += HandleCalligraphyComplete;
     }
 
-    void OnDisable()
+    void UnsubscribeFromEvents()
     {
-        // Unsubscribe from events
+        // Unsubscribe from mini-game events
         if (lanternGame != null)
+        {
             lanternGame.OnGameCompleted -= HandleLanternComplete;
+            Debug.Log("[MiniGameController] Unsubscribed from LanternGame events");
+        }
 
         // Unsubscribe from camera events
         if (cameraController != null)
+        {
             cameraController.OnMovementComplete -= HandleCameraArrived;
+            Debug.Log("[MiniGameController] Unsubscribed from CameraController events");
+        }
 
         // TODO: Unsubscribe from other mini-games
     }

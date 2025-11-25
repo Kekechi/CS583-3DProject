@@ -19,6 +19,7 @@ public class GameManager : MonoBehaviour
     }
 
     public GameState CurrentState { get; private set; }
+    private bool isTransitioning = false;
 
     [Header("References")]
     public RoomController roomController;
@@ -44,33 +45,68 @@ public class GameManager : MonoBehaviour
 
     void OnEnable()
     {
-        // Subscribe to events
+        Debug.Log("[GameManager] OnEnable called");
+        // Don't subscribe to events here - serialized refs might not be assigned yet
+    }
+
+    void OnDisable()
+    {
+        Debug.Log("[GameManager] OnDisable called");
+        UnsubscribeFromEvents();
+    }
+
+    void OnDestroy()
+    {
+        Debug.Log("[GameManager] OnDestroy called");
+        // For DontDestroyOnLoad objects, also cleanup on destroy
+        UnsubscribeFromEvents();
+    }
+
+    void Start()
+    {
+        Debug.Log("[GameManager] Start called");
+        SubscribeToEvents();
+        ChangeState(GameState.PlacingItem);
+    }
+
+    void SubscribeToEvents()
+    {
         if (miniGameController != null)
+        {
             miniGameController.OnMiniGameComplete += HandleMiniGameComplete;
+            Debug.Log("[GameManager] Subscribed to MiniGameController events");
+        }
+        else
+        {
+            Debug.LogError("[GameManager] miniGameController is NULL in Start!");
+        }
 
         if (roomController != null)
         {
             roomController.OnItemPlaced += HandleItemPlaced;
             roomController.OnRoomComplete += HandleRoomComplete;
+            Debug.Log("[GameManager] Subscribed to RoomController events");
+        }
+        else
+        {
+            Debug.LogError("[GameManager] roomController is NULL in Start!");
         }
     }
 
-    void OnDisable()
+    void UnsubscribeFromEvents()
     {
-        // Unsubscribe to prevent memory leaks
         if (miniGameController != null)
+        {
             miniGameController.OnMiniGameComplete -= HandleMiniGameComplete;
+            Debug.Log("[GameManager] Unsubscribed from MiniGameController events");
+        }
 
         if (roomController != null)
         {
             roomController.OnItemPlaced -= HandleItemPlaced;
             roomController.OnRoomComplete -= HandleRoomComplete;
+            Debug.Log("[GameManager] Unsubscribed from RoomController events");
         }
-    }
-
-    void Start()
-    {
-        ChangeState(GameState.PlacingItem);
     }
 
     public void ChangeState(GameState newState)
@@ -88,6 +124,13 @@ public class GameManager : MonoBehaviour
     /// </summary>
     void HandleMiniGameComplete(MiniGameResult result)
     {
+        // Guard: Only accept completion if we're actually playing a mini-game
+        if (CurrentState != GameState.PlayingMiniGame)
+        {
+            Debug.LogWarning($"[GameManager] Cannot complete mini-game - wrong state: {CurrentState} (expected PlayingMiniGame)");
+            return;
+        }
+
         Debug.Log($"[GameManager] Mini-game complete: {result.GameType}, time: {result.CompletionTime:F2}s");
 
         // Extract item prefab from result
@@ -97,11 +140,13 @@ public class GameManager : MonoBehaviour
         {
             ChangeState(GameState.PlacingItem);
             OnItemReadyToPlace?.Invoke(itemPrefab);
+            isTransitioning = false; // Transition complete
             Debug.Log($"[GameManager] Item ready to place: {itemPrefab.name}");
         }
         else
         {
             Debug.LogWarning("[GameManager] Result has no ItemInstance!");
+            isTransitioning = false; // Reset even on error
         }
     }
 
@@ -111,17 +156,32 @@ public class GameManager : MonoBehaviour
     /// </summary>
     public void StartMiniGame(MiniGameType gameType)
     {
-        Debug.Log($"[GameManager] Starting mini-game: {gameType}");
-
-        if (miniGameController != null)
+        // Guard: Only allow starting mini-game from PlacingItem state
+        if (CurrentState != GameState.PlacingItem)
         {
-            ChangeState(GameState.PlayingMiniGame);
-            miniGameController.StartMiniGame(gameType);
+            Debug.LogWarning($"[GameManager] Cannot start mini-game - wrong state: {CurrentState} (expected PlacingItem)");
+            return;
         }
-        else
+
+        // Guard: Prevent rapid clicks during transition
+        if (isTransitioning)
+        {
+            Debug.LogWarning("[GameManager] Cannot start mini-game - transition already in progress");
+            return;
+        }
+
+        // Guard: Validate reference
+        if (miniGameController == null)
         {
             Debug.LogError("[GameManager] MiniGameController reference is missing!");
+            return;
         }
+
+        // Valid request - proceed
+        Debug.Log($"[GameManager] Starting mini-game: {gameType}");
+        isTransitioning = true;
+        ChangeState(GameState.PlayingMiniGame);
+        miniGameController.StartMiniGame(gameType);
     }
 
     void HandleItemPlaced(PlacementSpot spot, GameObject item)
@@ -132,6 +192,13 @@ public class GameManager : MonoBehaviour
 
     void HandleRoomComplete()
     {
+        // Guard: Validate we have the expected number of items
+        if (itemsPlacedInCurrentRoom < 3)
+        {
+            Debug.LogWarning($"[GameManager] Room completion triggered early - only {itemsPlacedInCurrentRoom}/3 items placed");
+            return;
+        }
+
         Debug.Log("[GameManager] Room complete! All items placed.");
         ChangeState(GameState.RoomCompletion);
         // Future: Transition to next room, show completion UI, etc.
@@ -170,35 +237,23 @@ public class GameManager : MonoBehaviour
     void TestStartLanternGame()
     {
         Debug.Log("[TEST] Starting Lantern mini-game");
+        ChangeState(GameState.PlacingItem); // Ensure correct state for guard
         StartMiniGame(MiniGameType.Lantern);
-
-        if (miniGameController != null)
-        {
-            miniGameController.StartMiniGame(MiniGameType.Lantern);
-        }
     }
 
     [ContextMenu("Test: Start Origami Game")]
     void TestStartOrigamiGame()
     {
         Debug.Log("[TEST] Starting Origami mini-game");
+        ChangeState(GameState.PlacingItem); // Ensure correct state for guard
         StartMiniGame(MiniGameType.Origami);
-
-        if (miniGameController != null)
-        {
-            miniGameController.StartMiniGame(MiniGameType.Origami);
-        }
     }
 
     [ContextMenu("Test: Start Calligraphy Game")]
     void TestCalligraphyGame()
     {
         Debug.Log("[TEST] Starting Calligraphy mini-game");
+        ChangeState(GameState.PlacingItem); // Ensure correct state for guard
         StartMiniGame(MiniGameType.Calligraphy);
-
-        if (miniGameController != null)
-        {
-            miniGameController.StartMiniGame(MiniGameType.Calligraphy);
-        }
     }
 }

@@ -32,6 +32,9 @@ public class MiniGameController : MonoBehaviour
     private bool skipRequested = false;
     private MiniGameType? pendingGameActivation = null; // Game to activate when camera arrives
 
+    // Mini-game dictionary for interface-based management
+    private Dictionary<MiniGameType, IMiniGame> miniGames;
+
     /// <summary>
     /// Check if currently transitioning between mini-game and room
     /// </summary>
@@ -41,12 +44,35 @@ public class MiniGameController : MonoBehaviour
     {
         Debug.Log("[MiniGameController] Start called");
 
+        // Initialize mini-game dictionary
+        InitializeMiniGames();
+
         // Hide all mini-games initially
         if (origamiGame != null) origamiGame.gameObject.SetActive(false);
         if (calligraphyGame != null) calligraphyGame.gameObject.SetActive(false);
         if (lanternGame != null) lanternGame.gameObject.SetActive(false);
 
         SubscribeToEvents();
+    }
+
+    /// <summary>
+    /// Initialize the mini-game dictionary for interface-based management
+    /// </summary>
+    void InitializeMiniGames()
+    {
+        miniGames = new Dictionary<MiniGameType, IMiniGame>();
+
+        if (lanternGame != null)
+        {
+            miniGames[MiniGameType.Lantern] = lanternGame;
+            Debug.Log("[MiniGameController] Registered LanternGame");
+        }
+
+        // TODO: Register other games when they implement IMiniGame
+        // if (origamiGame != null)
+        //     miniGames[MiniGameType.Origami] = origamiGame;
+        // if (calligraphyGame != null)
+        //     miniGames[MiniGameType.Calligraphy] = calligraphyGame;
     }
 
     void OnEnable()
@@ -174,34 +200,42 @@ public class MiniGameController : MonoBehaviour
 
     void ActivateMiniGame(MiniGameType gameType)
     {
-        switch (gameType)
+        // Try to use the dictionary-based approach for IMiniGame implementations
+        if (miniGames.TryGetValue(gameType, out IMiniGame game))
         {
-            case MiniGameType.Origami:
-                if (origamiGame != null)
-                {
-                    origamiGame.gameObject.SetActive(true);
-                    origamiGame.StartGame();
-                }
-                break;
-
-            case MiniGameType.Calligraphy:
-                if (calligraphyGame != null)
-                {
-                    calligraphyGame.gameObject.SetActive(true);
-                    calligraphyGame.StartGame();
-                }
-                break;
-
-            case MiniGameType.Lantern:
-                if (lanternGame != null)
-                {
-                    lanternGame.gameObject.SetActive(true);
-                    lanternGame.StartGame();
-                }
-                break;
+            // Activate the GameObject and start the game using interface
+            MonoBehaviour gameMono = game as MonoBehaviour;
+            if (gameMono != null)
+            {
+                gameMono.gameObject.SetActive(true);
+                game.StartGame();
+                Debug.Log($"[MiniGameController] Started {gameType} via IMiniGame interface");
+            }
         }
+        else
+        {
+            // Fallback for games that haven't implemented IMiniGame yet
+            switch (gameType)
+            {
+                case MiniGameType.Origami:
+                    if (origamiGame != null)
+                    {
+                        origamiGame.gameObject.SetActive(true);
+                        origamiGame.StartGame();
+                    }
+                    break;
 
-        Debug.Log($"Started {gameType} mini-game");
+                case MiniGameType.Calligraphy:
+                    if (calligraphyGame != null)
+                    {
+                        calligraphyGame.gameObject.SetActive(true);
+                        calligraphyGame.StartGame();
+                    }
+                    break;
+            }
+
+            Debug.Log($"[MiniGameController] Started {gameType} via fallback switch");
+        }
     }
 
     /// <summary>
@@ -209,22 +243,29 @@ public class MiniGameController : MonoBehaviour
     /// </summary>
     void StopCurrentMiniGame()
     {
-        switch (currentMiniGame)
+        // Try to use the dictionary-based approach for IMiniGame implementations
+        if (miniGames.TryGetValue(currentMiniGame, out IMiniGame game))
         {
-            case MiniGameType.Lantern:
-                if (lanternGame != null)
-                    lanternGame.StopGame();
-                break;
+            game.StopGame();
+            Debug.Log($"[MiniGameController] Stopped {currentMiniGame} via IMiniGame interface");
+        }
+        else
+        {
+            // Fallback for games that haven't implemented IMiniGame yet
+            switch (currentMiniGame)
+            {
+                case MiniGameType.Origami:
+                    if (origamiGame != null && origamiGame.gameObject.activeSelf)
+                        origamiGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
+                    break;
 
-            case MiniGameType.Origami:
-                if (origamiGame != null && origamiGame.gameObject.activeSelf)
-                    origamiGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
-                break;
+                case MiniGameType.Calligraphy:
+                    if (calligraphyGame != null && calligraphyGame.gameObject.activeSelf)
+                        calligraphyGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
+                    break;
+            }
 
-            case MiniGameType.Calligraphy:
-                if (calligraphyGame != null && calligraphyGame.gameObject.activeSelf)
-                    calligraphyGame.gameObject.SetActive(false); // TODO: Add StopGame() when implemented
-                break;
+            Debug.Log($"[MiniGameController] Stopped {currentMiniGame} via fallback switch");
         }
     }
 

@@ -5,7 +5,7 @@ using UnityEngine;
 /// Game logic controller for the Lantern mini-game.
 /// Tracks brightness, harmony zone status, and win condition.
 /// </summary>
-public class LanternGame : MonoBehaviour
+public class LanternGame : MonoBehaviour, IMiniGame
 {
     [Header("Game Settings")]
     [Tooltip("Lower bound of harmony zone (0-1)")]
@@ -27,8 +27,11 @@ public class LanternGame : MonoBehaviour
     [Tooltip("Reference to the UI controller")]
     public LanternUI ui;
 
-    [Tooltip("Lantern prefab to spawn")]
+    [Tooltip("Lantern prefab to spawn during the game (visual only)")]
     public GameObject lanternPrefab;
+
+    [Tooltip("Lantern prefab to place in the room after completion")]
+    public GameObject roomLanternPrefab;
 
     [Tooltip("Where to spawn the lantern")]
     public Transform spawnPoint;
@@ -45,6 +48,9 @@ public class LanternGame : MonoBehaviour
     // Events
     public event Action OnGameStarted;
     public event Action<LanternResult> OnGameCompleted;
+
+    // IMiniGame implementation
+    public MiniGameType GameType => MiniGameType.Lantern;
 
     /// <summary>
     /// Start the mini-game: spawn lantern, show UI, reset state
@@ -181,11 +187,11 @@ public class LanternGame : MonoBehaviour
             ui.ShowSuccess();
         }
 
-        // Create result data
+        // Create result data with the room prefab (not the visual instance)
         LanternResult result = new LanternResult
         {
-            lanternInstance = spawnedLantern,
-            finalBrightness = brightness,
+            roomItemPrefab = roomLanternPrefab,  // Prefab to place in room
+            finalBrightness = brightness,         // Customization data
             CompletionTime = Time.time,
             adjustmentsMade = 0 // TODO: Track this if needed
         };
@@ -214,16 +220,13 @@ public class LanternGame : MonoBehaviour
 [Serializable]
 public class LanternResult : MiniGameResult
 {
-    public override GameObject ItemInstance => lanternInstance;
+    public override GameObject ItemInstance => roomItemPrefab;
     public override MiniGameType GameType => MiniGameType.Lantern;
 
     // Lantern-specific data
-    public GameObject lanternInstance;
-    public float finalBrightness;
-    public int adjustmentsMade;
+    public GameObject roomItemPrefab;  // The prefab to instantiate in the room
+    public float finalBrightness;      // Player's final brightness value
+    public int adjustmentsMade;        // Number of adjustments made
 
     // CompletionTime inherited from base class
-    // Future customization data can go here
-    // public Color paperColor;
-    // public int patternID;
 }

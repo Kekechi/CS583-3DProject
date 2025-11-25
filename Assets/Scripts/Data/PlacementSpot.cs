@@ -22,6 +22,9 @@ public class PlacementSpot : MonoBehaviour
   [Tooltip("Reference to the highlight visual (optional)")]
   public GameObject highlightVisual;
 
+  [Tooltip("Optional anchor transform for precise item placement (e.g., bottom of lantern aligns here). If null, uses spot's transform.")]
+  public Transform itemAnchor;
+
   [Header("Runtime State")]
   [Tooltip("Is this spot currently occupied by a placed item?")]
   public bool isOccupied = false;

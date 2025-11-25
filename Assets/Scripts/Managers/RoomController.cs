@@ -169,9 +169,9 @@ public class RoomController : MonoBehaviour
 
     /// <summary>
     /// Event handler: Called when GameManager has an item ready to place
-    /// Places the item at the stored spot
+    /// Places the item at the stored spot and applies customization data
     /// </summary>
-    void HandleItemReadyToPlace(GameObject itemPrefab)
+    void HandleItemReadyToPlace(GameObject itemPrefab, MiniGameResult result)
     {
         Debug.Log($"[RoomController] HandleItemReadyToPlace called with item: {(itemPrefab != null ? itemPrefab.name : "NULL")}");
 
@@ -187,16 +187,31 @@ public class RoomController : MonoBehaviour
             return;
         }
 
-        PlaceItemAtSpot(currentTriggeredSpot, itemPrefab);
+        PlaceItemAtSpot(currentTriggeredSpot, itemPrefab, result);
     }
 
     /// <summary>
-    /// Place an item at the specified spot
+    /// Place an item at the specified spot and apply customization from mini-game result
     /// </summary>
-    void PlaceItemAtSpot(PlacementSpot spot, GameObject itemPrefab)
+    void PlaceItemAtSpot(PlacementSpot spot, GameObject itemPrefab, MiniGameResult result)
     {
-        // Instantiate the item at the spot's position
-        GameObject item = Instantiate(itemPrefab, spot.transform.position, spot.transform.rotation);
+        // Use itemAnchor if available for precise positioning, otherwise use spot transform
+        Transform anchor = spot.itemAnchor != null ? spot.itemAnchor : spot.transform;
+
+        // Instantiate the item at the anchor's position
+        GameObject item = Instantiate(itemPrefab, anchor.position, anchor.rotation);
+
+        // Apply customization if the item supports it
+        ICustomizableItem customizable = item.GetComponent<ICustomizableItem>();
+        if (customizable != null && result != null)
+        {
+            customizable.ApplyCustomization(result);
+            Debug.Log($"[RoomController] Applied customization to {item.name}");
+        }
+        else if (result != null)
+        {
+            Debug.LogWarning($"[RoomController] Item {item.name} does not support customization (no ICustomizableItem component)");
+        }
 
         // Parent to item container for organization
         if (itemParent != null)

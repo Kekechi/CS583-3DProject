@@ -9,7 +9,7 @@ public class GameManager : MonoBehaviour
 
     // Events
     public event Action<GameState, GameState> OnStateChanged;
-    public event Action<GameObject> OnItemReadyToPlace;
+    public event Action<GameObject, MiniGameResult> OnItemReadyToPlace;
 
     public enum GameState
     {
@@ -120,7 +120,7 @@ public class GameManager : MonoBehaviour
 
     /// <summary>
     /// Called by MiniGameController when a mini-game completes
-    /// Extracts the item and fires event for RoomController
+    /// Extracts the item and fires event for RoomController with customization data
     /// </summary>
     void HandleMiniGameComplete(MiniGameResult result)
     {
@@ -139,7 +139,7 @@ public class GameManager : MonoBehaviour
         if (itemPrefab != null)
         {
             ChangeState(GameState.PlacingItem);
-            OnItemReadyToPlace?.Invoke(itemPrefab);
+            OnItemReadyToPlace?.Invoke(itemPrefab, result);  // Pass both prefab and result
             isTransitioning = false; // Transition complete
             Debug.Log($"[GameManager] Item ready to place: {itemPrefab.name}");
         }

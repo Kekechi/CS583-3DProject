@@ -2673,6 +2673,7 @@ MonoBehaviour:
   increaseKey: 32
   ui: {fileID: 854414011}
   lanternPrefab: {fileID: 7631074988119963334, guid: 4cb2174fe58d18d498abab7a42ce13d3, type: 3}
+  roomLanternPrefab: {fileID: 7631074988119963334, guid: 4cb2174fe58d18d498abab7a42ce13d3, type: 3}
   spawnPoint: {fileID: 816665353}
 --- !u!1 &1275436888
 GameObject:

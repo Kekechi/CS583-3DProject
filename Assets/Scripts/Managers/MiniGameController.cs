@@ -68,9 +68,13 @@ public class MiniGameController : MonoBehaviour
             Debug.Log("[MiniGameController] Registered LanternGame");
         }
 
-        // TODO: Register other games when they implement IMiniGame
-        // if (origamiGame != null)
-        //     miniGames[MiniGameType.Origami] = origamiGame;
+        if (origamiGame != null)
+        {
+            miniGames[MiniGameType.Origami] = origamiGame;
+            Debug.Log("[MiniGameController] Registered OrigamiGame");
+        }
+
+        // TODO: Register calligraphy when it implements IMiniGame
         // if (calligraphyGame != null)
         //     miniGames[MiniGameType.Calligraphy] = calligraphyGame;
     }
@@ -111,9 +115,14 @@ public class MiniGameController : MonoBehaviour
             Debug.LogError("[MiniGameController] cameraController is NULL in Start!");
         }
 
-        // TODO: Subscribe to origami and calligraphy when implemented
-        // if (origamiGame != null)
-        //     origamiGame.OnGameCompleted += HandleOrigamiComplete;
+        // Subscribe to origami events
+        if (origamiGame != null)
+        {
+            origamiGame.OnGameCompleted += HandleOrigamiComplete;
+            Debug.Log("[MiniGameController] Subscribed to OrigamiGame events");
+        }
+
+        // TODO: Subscribe to calligraphy when implemented
         // if (calligraphyGame != null)
         //     calligraphyGame.OnGameCompleted += HandleCalligraphyComplete;
     }
@@ -134,7 +143,14 @@ public class MiniGameController : MonoBehaviour
             Debug.Log("[MiniGameController] Unsubscribed from CameraController events");
         }
 
-        // TODO: Unsubscribe from other mini-games
+        // Unsubscribe from origami events
+        if (origamiGame != null)
+        {
+            origamiGame.OnGameCompleted -= HandleOrigamiComplete;
+            Debug.Log("[MiniGameController] Unsubscribed from OrigamiGame events");
+        }
+
+        // TODO: Unsubscribe from calligraphy when implemented
     }
 
     void Update()
@@ -273,6 +289,14 @@ public class MiniGameController : MonoBehaviour
     /// Handle lantern game completion - start transition
     /// </summary>
     void HandleLanternComplete(LanternResult result)
+    {
+        StartCoroutine(HandleMiniGameCompletion(result));
+    }
+
+    /// <summary>
+    /// Handle origami game completion - start transition
+    /// </summary>
+    void HandleOrigamiComplete(OrigamiResult result)
     {
         StartCoroutine(HandleMiniGameCompletion(result));
     }

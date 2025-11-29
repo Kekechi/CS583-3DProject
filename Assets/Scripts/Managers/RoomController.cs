@@ -151,6 +151,7 @@ public class RoomController : MonoBehaviour
     /// </summary>
     void HandleSpotClicked(PlacementSpot spot)
     {
+        if (gameManager.CurrentState != GameManager.GameState.PlacingItem) return;
         Debug.Log($"[RoomController] Spot clicked: {spot.gameObject.name} (triggers {spot.triggersGame})");
 
         // Store which spot triggered this mini-game

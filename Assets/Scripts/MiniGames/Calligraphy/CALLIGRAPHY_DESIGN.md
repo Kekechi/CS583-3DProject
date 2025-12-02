@@ -57,9 +57,66 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 
 ---
 
+## Camera Flow
+
+### Camera Positions
+
+| Position      | Name                        | Purpose         |
+| ------------- | --------------------------- | --------------- |
+| Room          | `roomPosition`              | Normal gameplay |
+| Wide Paper    | `calligraphyWidePosition`   | See full paper  |
+| Zoomed Stroke | `calligraphyZoomedPosition` | Focus on stroke |
+
+### Full Transition Sequence
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                         CAMERA FLOW                             │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│  1. Player clicks placement spot                                │
+│         ↓                                                       │
+│  2. Camera → Wide Paper View (0.5s)                             │
+│         ↓                                                       │
+│  3. Paper spawns, shows full 一期一会                            │
+│         ↓ (1.0s pause)                                          │
+│  4. Camera → Zoomed Stroke View (0.3s)                          │
+│         ↓                                                       │
+│  5. Player traces stroke                                        │
+│         ↓                                                       │
+│  6. Stroke complete → Character turns gold                      │
+│         ↓                                                       │
+│  7. Camera → Wide Paper View (0.3s)                             │
+│         ↓                                                       │
+│  8. Success UI appears ("一期一会 - Ichigo Ichie")              │
+│         ↓ (2.0s pause)                                          │
+│  9. Magic reveal effect (1.0s)                                  │
+│         ↓                                                       │
+│  10. Camera → Room View (0.5s)                                  │
+│         ↓                                                       │
+│  11. Paper placed in room                                       │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### Timing Summary
+
+| Phase           | Duration | What Happens          |
+| --------------- | -------- | --------------------- |
+| Camera → Wide   | 0.5s     | Smooth transition     |
+| Show Full Paper | 1.0s     | Player sees phrase    |
+| Camera → Zoomed | 0.3s     | Focus on stroke       |
+| Player Traces   | Variable | Input enabled         |
+| Camera → Wide   | 0.3s     | After stroke complete |
+| Success Display | 2.0s     | Show phrase info      |
+| Reveal Effect   | 1.0s     | Magic animation       |
+| Camera → Room   | 0.5s     | Return to room        |
+
+---
+
 ## Game Flow
 
-### Phase 1: Setup
+### Phase 1: Setup (Wide View)
 
 ```
 ┌─────────────────────────────────────┐
@@ -68,20 +125,41 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 │         ↑                           │
 │       Gray  Black Black Black       │
 │                                     │
-│    (Start/End points hidden)        │
+│    Camera shows full paper          │
+│    Player sees entire phrase        │
 │                                     │
 └─────────────────────────────────────┘
 ```
 
+- Camera transitions to wide view
 - CalligraphyGame spawns paperPrefab
-- Points are hidden until hover
+- Brief pause to let player see phrase
 
-### Phase 2: Hover Near Start
+### Phase 2: Zoom to Stroke
 
 ```
 ┌─────────────────────────────────────┐
 │                                     │
-│         一期一会                     │
+│              一                      │
+│         ↑                           │
+│       Gray character                │
+│                                     │
+│    Camera zoomed in                 │
+│    Points hidden until hover        │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+- Camera zooms to stroke area
+- Only current character visible
+- Input enabled
+
+### Phase 3: Hover Near Start
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│              一                      │
 │         ●                           │
 │         ↑                           │
 │    StartPoint appears (green)       │
@@ -93,12 +171,12 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 - CalligraphyPaper.ShowStartHighlight(true)
 - Signifies "click here to begin"
 
-### Phase 3: Drawing
+### Phase 4: Drawing
 
 ```
 ┌─────────────────────────────────────┐
 │                                     │
-│         一期一会                     │
+│              一                      │
 │                                     │
 │         ●━━━━━━━━━━                 │
 │         ↑          ↵               │
@@ -113,14 +191,14 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 - LineRenderer follows cursor (green)
 - CalligraphyGame.Update() does raycast every frame
 
-### Phase 4: Stroke Complete
+### Phase 5: Stroke Complete
 
 ```
 ┌─────────────────────────────────────┐
 │                                     │
-│         一期一会                     │
+│              一                      │
 │         ↑                           │
-│       Gold  Black Black Black       │
+│       Gold character                │
 │                                     │
 │         ━━━━━━━━━━━━━━━━━           │
 │         ↑                           │
@@ -134,7 +212,29 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 - Character 一 changes to gold
 - CalligraphyPaper fires OnStrokeCompleted
 
-### Phase 5: Magic Reveal
+### Phase 6: Success Display (Wide View)
+
+```
+┌─────────────────────────────────────┐
+│                                     │
+│         一期一会                     │
+│         ↑                           │
+│       Gold  Black Black Black       │
+│                                     │
+│    ┌─────────────────────────┐      │
+│    │      一期一会            │      │
+│    │     Ichigo Ichie        │      │
+│    │ "Once-in-a-lifetime..." │      │
+│    └─────────────────────────┘      │
+│                                     │
+└─────────────────────────────────────┘
+```
+
+- Camera returns to wide view
+- Success UI panel appears
+- Shows phrase, reading, meaning
+
+### Phase 7: Magic Reveal
 
 ```
 ┌─────────────────────────────────────┐
@@ -143,15 +243,22 @@ PaperPrefab (per-design, e.g., IchigoIchie_Paper.prefab)
 │         ↑                           │
 │     All Gold + Glow Effect          │
 │                                     │
-│    "Ichigo Ichie" text appears      │
-│    "Once-in-a-lifetime encounter"   │
+│    Particles, shimmer               │
 │                                     │
 └─────────────────────────────────────┘
 ```
 
-- All strokes complete → CalligraphyPaper fires OnAllStrokesCompleted
+- Success UI hides
 - Full phrase reveals with gold + magic effect
-- CalligraphyGame fires OnGameCompleted with CalligraphyResult
+- CalligraphyGame fires OnGameCompleted
+
+### Phase 8: Return to Room
+
+```
+- Camera transitions back to room
+- MiniGameController places scroll
+- Player continues exploring
+```
 
 ---
 
@@ -220,95 +327,158 @@ public class StrokeData
 ```csharp
 public class CalligraphyGame : MonoBehaviour, IMiniGame
 {
-    [Header("Settings")]
-    public float hoverRadius = 0.5f;
-    public float endTolerance = 0.3f;
+    [Header("Design")]
+    [SerializeField] private CalligraphyDesign currentDesign;
 
-    [Header("Current Design")]
-    private CalligraphyDesign currentDesign;
-    private CalligraphyPaper activePaper;
-    private Camera mainCamera;
+    [Header("Spawn")]
+    [SerializeField] private Transform spawnPoint;
+    [SerializeField] private LayerMask paperLayer;
+
+    [Header("Camera Positions")]
+    [SerializeField] private Transform wideViewPosition;
+    [SerializeField] private Transform zoomedViewPosition;
+
+    [Header("Settings")]
+    [SerializeField] private float hoverRadius = 0.5f;
+    [SerializeField] private float endTolerance = 0.3f;
+
+    [Header("Timing")]
+    [SerializeField] private float initialPauseTime = 1.0f;
+    [SerializeField] private float successDisplayTime = 2.0f;
+    [SerializeField] private float revealEffectTime = 1.0f;
+
+    [Header("References")]
+    [SerializeField] private CameraController cameraController;
+    [SerializeField] private CalligraphyUI calligraphyUI;
 
     // Events
     public event Action<CalligraphyResult> OnGameCompleted;
 
     // State
-    private bool isActive = false;
-    private bool isDrawing = false;
+    private CalligraphyPaper activePaper;
+    private GameObject spawnedPaper;
+    private Camera mainCamera;
+    private GameState state = GameState.Inactive;
 
-    public void Initialize(CalligraphyDesign design)
+    private enum GameState
     {
-        currentDesign = design;
+        Inactive,
+        TransitioningToWide,
+        ShowingFullPaper,
+        TransitioningToZoomed,
+        WaitingToStart,
+        Drawing,
+        TransitioningToWideAfterStroke,
+        ShowingSuccess,
+        RevealEffect,
+        TransitioningToRoom
     }
 
     public void StartGame()
     {
-        isActive = true;
-        SpawnPaper();
-        SubscribeToPaperEvents();
+        StartCoroutine(GameSequence());
     }
 
-    public void StopGame()
+    private IEnumerator GameSequence()
     {
-        isActive = false;
-        CleanupPaper();
+        // Phase 1: Transition to wide view
+        state = GameState.TransitioningToWide;
+        cameraController.MoveToPosition(wideViewPosition);
+        yield return new WaitForSeconds(cameraController.TransitionDuration);
+
+        // Phase 2: Spawn paper, show full phrase
+        state = GameState.ShowingFullPaper;
+        SpawnPaper();
+        yield return new WaitForSeconds(initialPauseTime);
+
+        // Phase 3: Zoom to stroke
+        state = GameState.TransitioningToZoomed;
+        cameraController.MoveToPosition(zoomedViewPosition);
+        yield return new WaitForSeconds(cameraController.TransitionDuration);
+
+        // Phase 4: Enable input
+        state = GameState.WaitingToStart;
     }
 
     private void Update()
     {
-        if (!isActive) return;
+        if (state != GameState.WaitingToStart && state != GameState.Drawing)
+            return;
 
-        // Raycast for cursor position
         Ray ray = mainCamera.ScreenPointToRay(Input.mousePosition);
-        if (Physics.Raycast(ray, out RaycastHit hit))
+        if (!Physics.Raycast(ray, out RaycastHit hit, 100f, paperLayer))
+            return;
+
+        Vector3 cursorWorld = hit.point;
+
+        if (state == GameState.WaitingToStart)
         {
-            Vector3 cursorWorld = hit.point;
-
-            if (!isDrawing)
-            {
-                // Check hover near start
-                Vector3 startPos = activePaper.GetCurrentStrokeStart();
-                bool nearStart = Vector3.Distance(cursorWorld, startPos) < hoverRadius;
-                activePaper.ShowStartHighlight(nearStart);
-
-                // Check click to start
-                if (nearStart && Input.GetMouseButtonDown(0))
-                {
-                    isDrawing = true;
-                    activePaper.StartDrawing();
-                }
-            }
-            else
-            {
-                // Update line position
-                activePaper.UpdateLine(cursorWorld);
-
-                // Check release
-                if (Input.GetMouseButtonUp(0))
-                {
-                    Vector3 endPos = activePaper.GetCurrentStrokeEnd();
-                    if (Vector3.Distance(cursorWorld, endPos) < endTolerance)
-                    {
-                        activePaper.CompleteStroke();
-                    }
-                    else
-                    {
-                        activePaper.CancelStroke();
-                    }
-                    isDrawing = false;
-                }
-            }
+            HandleWaitingState(cursorWorld);
+        }
+        else if (state == GameState.Drawing)
+        {
+            HandleDrawingState(cursorWorld);
         }
     }
 
-    private void HandleAllStrokesCompleted()
+    private IEnumerator PostStrokeSequence()
     {
-        var result = new CalligraphyResult
-        {
-            design = currentDesign,
-            roomItemPrefab = currentDesign.scrollPrefab
-        };
-        OnGameCompleted?.Invoke(result);
+        // Transition back to wide view
+        state = GameState.TransitioningToWideAfterStroke;
+        cameraController.MoveToPosition(wideViewPosition);
+        yield return new WaitForSeconds(cameraController.TransitionDuration);
+
+        // Show success UI
+        state = GameState.ShowingSuccess;
+        calligraphyUI.ShowSuccess(currentDesign);
+        yield return new WaitForSeconds(successDisplayTime);
+
+        // Play reveal effect
+        state = GameState.RevealEffect;
+        calligraphyUI.HideSuccess();
+        activePaper.PlayRevealEffect();
+        yield return new WaitForSeconds(revealEffectTime);
+
+        // Transition back to room
+        state = GameState.TransitioningToRoom;
+        cameraController.MoveToRoom();
+        yield return new WaitForSeconds(cameraController.TransitionDuration);
+
+        // Complete
+        CompleteGame();
+    }
+
+    public void StopGame()
+    {
+        StopAllCoroutines();
+        state = GameState.Inactive;
+        if (spawnedPaper != null) Destroy(spawnedPaper);
+    }
+}
+```
+
+### CalligraphyUI.cs (Screen Space UI)
+
+```csharp
+public class CalligraphyUI : MonoBehaviour
+{
+    [Header("Success Panel")]
+    [SerializeField] private GameObject successPanel;
+    [SerializeField] private TextMeshProUGUI phraseText;
+    [SerializeField] private TextMeshProUGUI readingText;
+    [SerializeField] private TextMeshProUGUI meaningText;
+
+    public void ShowSuccess(CalligraphyDesign design)
+    {
+        phraseText.text = design.phraseName;
+        readingText.text = design.phraseReading;
+        meaningText.text = design.phraseMeaning;
+        successPanel.SetActive(true);
+    }
+
+    public void HideSuccess()
+    {
+        successPanel.SetActive(false);
     }
 }
 ```
@@ -389,36 +559,173 @@ All strokes done
 
 ## Development Phases
 
-### Phase 1: Core Scripts
+### Phase 1: Minimal Testable Core
 
-- [ ] Create `CalligraphyDesign.cs` (ScriptableObject)
-- [ ] Create `CalligraphyPaper.cs` (stub with events)
-- [ ] Create `CalligraphyGame.cs` (IMiniGame stub)
-- [ ] Create `CalligraphyResult.cs`
+**Goal:** See paper spawn and raycast working
 
-### Phase 2: Paper Mechanics
+**Files:**
 
-- [ ] Implement stroke state machine
-- [ ] Line drawing with LineRenderer
-- [ ] Start/end detection
-- [ ] Character color transitions
+1. `CalligraphyDesign.cs` - ScriptableObject (data only)
+2. `CalligraphyPaper.cs` - Stub (just holds references)
+3. `CalligraphyGame.cs` - Minimal (spawn paper, raycast debug)
 
-### Phase 3: Prefab Setup
+**Test:** Click play → paper spawns → Debug.Log shows raycast hit position
 
-- [ ] Create paper prefab with placeholder
-- [ ] Add character TextMeshPro objects
-- [ ] Configure StrokeData list
-- [ ] Add visual guides
+---
 
-### Phase 4: Game Integration
+### Phase 2: Line Drawing
 
-- [ ] Register in MiniGameController
-- [ ] Wire up events
-- [ ] Test flow end-to-end
+**Goal:** Draw line from start to cursor
 
-### Phase 5: Polish
+**Files:**
 
-- [ ] Magic reveal effect (particles, glow)
-- [ ] Sound effects
-- [ ] Romanji + meaning text display
-- [ ] Final calligraphy font
+1. `CalligraphyPaper.cs` - Add StartDrawing(), UpdateLine()
+
+**Test:** Click on paper → green line follows cursor → release resets
+
+---
+
+### Phase 3: Stroke Completion
+
+**Goal:** Complete stroke when releasing near end point
+
+**Files:**
+
+1. `CalligraphyPaper.cs` - Add CompleteStroke(), CancelStroke(), events
+2. `CalligraphyResult.cs` - Result data class
+
+**Test:** Drag from start to end → line turns black → event fires
+
+---
+
+### Phase 4: Visual Feedback
+
+**Goal:** Character color change, point highlights
+
+**Files:**
+
+1. `CalligraphyPaper.cs` - Add ShowStartHighlight(), character references
+
+**Test:** Hover near start → green circle appears → complete stroke → character turns gold
+
+---
+
+### Phase 5: Camera Transitions
+
+**Goal:** Full camera flow working
+
+**Files:**
+
+1. `CalligraphyGame.cs` - Add coroutine sequence, camera positions
+2. `CameraController.cs` - Add MoveToPosition() if not exists
+
+**Test:** Start game → wide view → zoom → draw → wide view → room
+
+---
+
+### Phase 6: Success UI
+
+**Goal:** Show phrase info after completion
+
+**Files:**
+
+1. `CalligraphyUI.cs` - New script for UI panel
+
+**Unity Setup:**
+
+- Create Canvas with SuccessPanel
+
+**Test:** Complete stroke → UI shows phrase/reading/meaning → hides after delay
+
+---
+
+### Phase 7: Integration
+
+**Goal:** Connect to MiniGameController
+
+**Files:**
+
+1. `MiniGameController.cs` - Add calligraphy handling
+
+**Test:** Click placement spot → full flow → scroll placed in room
+
+---
+
+### Phase 8: Polish
+
+**Goal:** Effects and final touches
+
+**Files:**
+
+1. `CalligraphyPaper.cs` - Add PlayRevealEffect()
+
+**Unity Setup:**
+
+- Particle effects
+- Sound effects
+
+**Test:** Full flow with all visual/audio polish
+
+---
+
+## File Creation Order
+
+| Order | File                             | Depends On    | Testable After        |
+| ----- | -------------------------------- | ------------- | --------------------- |
+| 1     | `CalligraphyDesign.cs`           | Nothing       | Create asset in Unity |
+| 2     | `CalligraphyResult.cs`           | Nothing       | Compile check         |
+| 3     | `CalligraphyPaper.cs` (stub)     | Nothing       | Attach to prefab      |
+| 4     | `CalligraphyGame.cs` (minimal)   | Design, Paper | Spawn + raycast       |
+| 5     | `CalligraphyPaper.cs` (line)     | -             | Line drawing          |
+| 6     | `CalligraphyPaper.cs` (complete) | Result        | Stroke completion     |
+| 7     | `CalligraphyUI.cs`               | Design        | UI display            |
+| 8     | `CalligraphyGame.cs` (full)      | UI, Camera    | Full sequence         |
+
+---
+
+## Testing Checkpoints
+
+### Checkpoint 1: Basic Setup
+
+```
+☐ CalligraphyDesign asset created
+☐ Paper prefab with collider
+☐ CalligraphyGame spawns paper
+☐ Raycast hits paper (Debug.Log)
+```
+
+### Checkpoint 2: Drawing
+
+```
+☐ Click near start point detected
+☐ LineRenderer appears on click
+☐ Line follows cursor position
+☐ Line resets on release
+```
+
+### Checkpoint 3: Completion
+
+```
+☐ Release near end point detected
+☐ Line changes to black
+☐ OnStrokeCompleted event fires
+☐ Character changes to gold
+```
+
+### Checkpoint 4: Camera
+
+```
+☐ Camera moves to wide view
+☐ Camera moves to zoomed view
+☐ Camera returns to wide after stroke
+☐ Camera returns to room
+```
+
+### Checkpoint 5: Full Flow
+
+```
+☐ Placement spot triggers mini-game
+☐ Complete stroke shows success UI
+☐ Reveal effect plays
+☐ Scroll placed in room
+```

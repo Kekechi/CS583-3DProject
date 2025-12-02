@@ -74,9 +74,11 @@ public class MiniGameController : MonoBehaviour
             Debug.Log("[MiniGameController] Registered OrigamiGame");
         }
 
-        // TODO: Register calligraphy when it implements IMiniGame
-        // if (calligraphyGame != null)
-        //     miniGames[MiniGameType.Calligraphy] = calligraphyGame;
+        if (calligraphyGame != null)
+        {
+            miniGames[MiniGameType.Calligraphy] = calligraphyGame;
+            Debug.Log("[MiniGameController] Registered CalligraphyGame");
+        }
     }
 
     void OnEnable()
@@ -122,9 +124,12 @@ public class MiniGameController : MonoBehaviour
             Debug.Log("[MiniGameController] Subscribed to OrigamiGame events");
         }
 
-        // TODO: Subscribe to calligraphy when implemented
-        // if (calligraphyGame != null)
-        //     calligraphyGame.OnGameCompleted += HandleCalligraphyComplete;
+        // Subscribe to calligraphy events
+        if (calligraphyGame != null)
+        {
+            calligraphyGame.OnGameCompleted += HandleCalligraphyComplete;
+            Debug.Log("[MiniGameController] Subscribed to CalligraphyGame events");
+        }
     }
 
     void UnsubscribeFromEvents()
@@ -150,7 +155,12 @@ public class MiniGameController : MonoBehaviour
             Debug.Log("[MiniGameController] Unsubscribed from OrigamiGame events");
         }
 
-        // TODO: Unsubscribe from calligraphy when implemented
+        // Unsubscribe from calligraphy events
+        if (calligraphyGame != null)
+        {
+            calligraphyGame.OnGameCompleted -= HandleCalligraphyComplete;
+            Debug.Log("[MiniGameController] Unsubscribed from CalligraphyGame events");
+        }
     }
 
     void Update()
@@ -297,6 +307,14 @@ public class MiniGameController : MonoBehaviour
     /// Handle origami game completion - start transition
     /// </summary>
     void HandleOrigamiComplete(OrigamiResult result)
+    {
+        StartCoroutine(HandleMiniGameCompletion(result));
+    }
+
+    /// <summary>
+    /// Handle calligraphy game completion - start transition with success display wait.
+    /// </summary>
+    void HandleCalligraphyComplete(CalligraphyResult result)
     {
         StartCoroutine(HandleMiniGameCompletion(result));
     }

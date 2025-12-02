@@ -13,11 +13,15 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     // ─────────────────────────────────────────────────────────────────────────
     public enum CalligraphyState
     {
-        Inactive,           // Game not running
-        WaitingToStart,     // Paper spawned, waiting for first input (Phase 1)
-        Drawing,            // Player is actively drawing strokes (Phase 2+)
-        BetweenStrokes,     // Finished one stroke, waiting for next (Phase 2+)
-        Complete            // All strokes finished, showing result (Phase 2+)
+        Inactive,              // Game not running
+        TransitioningToWide,   // Camera moving to wide view
+        ShowingFullPaper,      // Pausing on wide view to show phrase
+        TransitioningToZoom,   // Camera moving to zoomed view
+        WaitingToStart,        // Ready for player input
+        Drawing,               // Player is actively drawing strokes
+        TransitioningBackWide, // Camera returning to wide after stroke
+        Complete,              // All strokes finished
+        BetweenStrokes         // Future: multi-stroke support
     }
 
     // ─────────────────────────────────────────────────────────────────────────
@@ -36,12 +40,25 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     [Tooltip("How close to start point to begin drawing")]
     [SerializeField] private float startRadius = 0.15f;
 
+    [Tooltip("How close to end point to complete stroke (more forgiving)")]
+    [SerializeField] private float endRadius = 0.2f;
+
+    [Header("Timing")]
+    [Tooltip("Time to show full paper before zooming to stroke")]
+    [SerializeField] private float initialPauseTime = 1.0f;
+
     // ─────────────────────────────────────────────────────────────────────────
     // Runtime State
     // ─────────────────────────────────────────────────────────────────────────
     private CalligraphyState currentState = CalligraphyState.Inactive;
     private CalligraphyPaper currentPaper;
     private float startTime;
+    private Coroutine gameSequenceCoroutine;
+
+    // ─────────────────────────────────────────────────────────────────────────
+    // Events
+    // ─────────────────────────────────────────────────────────────────────────
+    public event Action<CalligraphyResult> OnGameCompleted;
 
     // ─────────────────────────────────────────────────────────────────────────
     // IMiniGame Implementation
@@ -71,16 +88,26 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     {
         Debug.Log("[CalligraphyGame] StartGame() called");
 
+        // 1. Spawn paper first (can happen while camera transitions)
         SpawnPaper();
         startTime = Time.time;
 
-        // Start camera zoom sequence
-        StartCoroutine(ZoomToPaperSequence());
+        // 2. Start the full game sequence
+        if (gameSequenceCoroutine != null)
+            StopCoroutine(gameSequenceCoroutine);
+        gameSequenceCoroutine = StartCoroutine(GameSequence());
     }
 
     public void StopGame()
     {
         Debug.Log("[CalligraphyGame] StopGame() called");
+
+        // Stop any running sequence
+        if (gameSequenceCoroutine != null)
+        {
+            StopCoroutine(gameSequenceCoroutine);
+            gameSequenceCoroutine = null;
+        }
 
         currentState = CalligraphyState.Inactive;
 
@@ -173,6 +200,19 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     /// </summary>
     private void HandleWaitingState(bool hitPaper, RaycastHit hit)
     {
+        // Check hover for start highlight (always, not just on click)
+        if (hitPaper && currentPaper != null)
+        {
+            Vector3 startPoint = currentPaper.GetCurrentStrokeStart();
+            float hoverDistance = Vector3.Distance(hit.point, startPoint);
+            bool nearStart = hoverDistance <= startRadius;
+            currentPaper.ShowStartHighlight(nearStart);
+        }
+        else if (currentPaper != null)
+        {
+            currentPaper.ShowStartHighlight(false);
+        }
+
         // Need mouse down to start
         if (!Input.GetMouseButtonDown(0))
             return;
@@ -181,8 +221,8 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
             return;
 
         // Check if click is near start point
-        Vector3 startPoint = currentPaper.GetCurrentStrokeStart();
-        float distance = Vector3.Distance(hit.point, startPoint);
+        Vector3 startPoint2 = currentPaper.GetCurrentStrokeStart();
+        float distance = Vector3.Distance(hit.point, startPoint2);
 
         if (distance <= startRadius)
         {
@@ -206,62 +246,161 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         if (hitPaper && currentPaper != null)
         {
             currentPaper.UpdateLine(hit.point);
+
+            // Show end highlight only when cursor is near end point
+            Vector3 endPoint = currentPaper.GetCurrentStrokeEnd();
+            float distanceToEnd = Vector3.Distance(hit.point, endPoint);
+            bool nearEnd = distanceToEnd <= endRadius;
+            currentPaper.ShowEndHighlight(nearEnd);
+        }
+        else if (currentPaper != null)
+        {
+            // Cursor off paper - hide end highlight
+            currentPaper.ShowEndHighlight(false);
         }
 
         // Check for mouse release
         if (Input.GetMouseButtonUp(0))
         {
-            // Cancel stroke (Phase 2 - just reset, Phase 3 will add completion check)
-            if (currentPaper != null)
+            if (currentPaper == null)
+                return;
+
+            // Hide start highlight
+            currentPaper.ShowStartHighlight(false);
+            // Hide end highlight
+            currentPaper.ShowEndHighlight(false);
+
+            // Check if released near end point
+            if (hitPaper)
             {
-                currentPaper.CancelStroke();
+                Vector3 endPoint = currentPaper.GetCurrentStrokeEnd();
+                float distance = Vector3.Distance(hit.point, endPoint);
+
+                if (distance <= endRadius)
+                {
+                    // Success! Complete the stroke
+                    currentPaper.CompleteStroke();
+                    currentPaper.RevealCharacter();
+
+                    // Start post-completion sequence (zoom back to wide)
+                    StartCoroutine(PostCompletionSequence());
+                    return;
+                }
+                else
+                {
+                    Debug.Log($"[CalligraphyGame] Released too far from end. Distance: {distance:F3}, Required: {endRadius}");
+                }
             }
+
+            // Not near end - cancel stroke
+            currentPaper.CancelStroke();
             currentState = CalligraphyState.WaitingToStart;
-            Debug.Log("[CalligraphyGame] Mouse released - stroke cancelled (Phase 2)");
+            Debug.Log("[CalligraphyGame] Stroke cancelled - try again");
         }
     }
 
     /// <summary>
-    /// Coroutine that handles camera zoom to paper after spawn.
+    /// Main game sequence coroutine - handles full camera flow.
+    /// Flow: Spawn → Wait for wide view (MiniGameController) → Pause → Zoom → Player draws
     /// </summary>
-    private IEnumerator ZoomToPaperSequence()
+    private IEnumerator GameSequence()
     {
-        currentState = CalligraphyState.Inactive; // Not ready for input yet
-        Debug.Log("[CalligraphyGame] Starting zoom sequence...");
+        Debug.Log("[CalligraphyGame] Starting game sequence...");
 
-        // Get camera position from paper prefab
         if (currentPaper == null)
         {
-            Debug.LogError("[CalligraphyGame] No paper spawned, cannot zoom!");
+            Debug.LogError("[CalligraphyGame] No paper spawned!");
             yield break;
         }
 
-        Transform cameraTarget = currentPaper.GetCameraPosition();
-        if (cameraTarget == null)
-        {
-            Debug.LogWarning("[CalligraphyGame] Paper has no cameraPosition set, skipping zoom");
-            currentState = CalligraphyState.WaitingToStart;
-            yield break;
-        }
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 1: Wait for camera to arrive at wide view (calligraphyPosition)
+        // MiniGameController initiates camera movement, we just wait
+        // ─────────────────────────────────────────────────────────────────────
+        currentState = CalligraphyState.TransitioningToWide;
 
-        // Move camera to paper's camera position
-        if (cameraController != null)
+        if (cameraController != null && cameraController.IsMoving)
         {
-            cameraController.MoveTo(cameraTarget);
-            Debug.Log($"[CalligraphyGame] Camera moving to {cameraTarget.name}");
-
-            // Wait for camera to finish moving
+            Debug.Log("[CalligraphyGame] Waiting for camera to arrive at wide view...");
             yield return new WaitUntil(() => !cameraController.IsMoving);
-            Debug.Log("[CalligraphyGame] Camera arrived at paper");
+            Debug.Log("[CalligraphyGame] Camera arrived at wide view");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 2: Pause to show full paper/phrase
+        // ─────────────────────────────────────────────────────────────────────
+        currentState = CalligraphyState.ShowingFullPaper;
+        Debug.Log($"[CalligraphyGame] Showing full paper for {initialPauseTime}s...");
+        yield return new WaitForSeconds(initialPauseTime);
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 3: Transition to zoomed view (from paper prefab)
+        // ─────────────────────────────────────────────────────────────────────
+        currentState = CalligraphyState.TransitioningToZoom;
+        Transform zoomedTarget = currentPaper.GetCameraPositionZoomed();
+
+        if (zoomedTarget != null && cameraController != null)
+        {
+            cameraController.MoveTo(zoomedTarget);
+            Debug.Log("[CalligraphyGame] Camera moving to zoomed view...");
+            yield return new WaitUntil(() => !cameraController.IsMoving);
+            Debug.Log("[CalligraphyGame] Camera arrived at zoomed view");
         }
         else
         {
-            Debug.LogWarning("[CalligraphyGame] No CameraController, skipping zoom");
+            Debug.LogWarning("[CalligraphyGame] Missing zoomed camera position or controller");
         }
 
-        // Now ready for input
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 4: Ready for player input
+        // ─────────────────────────────────────────────────────────────────────
         currentState = CalligraphyState.WaitingToStart;
-        Debug.Log($"[CalligraphyGame] State changed to: {currentState}");
+        Debug.Log("[CalligraphyGame] Ready for player input!");
+
+        // Player draws via Update() → HandleWaitingState/HandleDrawingState
+        // PostCompletionSequence() is triggered when stroke completes
+    }
+
+    /// <summary>
+    /// Post-completion sequence - zoom back to wide view and fire completion event.
+    /// </summary>
+    private IEnumerator PostCompletionSequence()
+    {
+        Debug.Log("[CalligraphyGame] Stroke completed! Starting post-completion sequence...");
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 1: Transition back to wide view (calligraphyPosition on CameraController)
+        // ─────────────────────────────────────────────────────────────────────
+        currentState = CalligraphyState.TransitioningBackWide;
+
+        if (cameraController != null && cameraController.calligraphyPosition != null)
+        {
+            cameraController.MoveTo(cameraController.calligraphyPosition);
+            Debug.Log("[CalligraphyGame] Camera returning to wide view...");
+            yield return new WaitUntil(() => !cameraController.IsMoving);
+            Debug.Log("[CalligraphyGame] Camera arrived at wide view");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 2: Fire completion event (MiniGameController handles room return)
+        // ─────────────────────────────────────────────────────────────────────
+        currentState = CalligraphyState.Complete;
+        float completionTime = Time.time - startTime;
+
+        // Debug: verify scrollPrefab exists
+        Debug.Log($"[CalligraphyGame] Creating result. design: {design != null}, scrollPrefab: {design?.scrollPrefab?.name ?? "NULL"}");
+
+        // Create result - use explicit assignment to ensure field is set
+        CalligraphyResult result = new CalligraphyResult();
+        result.design = design;
+        result.roomItemPrefab = design.scrollPrefab;
+        result.CompletionTime = completionTime;
+
+        // Debug: verify result
+        Debug.Log($"[CalligraphyGame] Result created. roomItemPrefab: {result.roomItemPrefab?.name ?? "NULL"}, ItemInstance: {result.ItemInstance?.name ?? "NULL"}");
+        Debug.Log($"[CalligraphyGame] Game complete! Total time: {completionTime:F2}s");
+
+        OnGameCompleted?.Invoke(result);
     }
 
     // ─────────────────────────────────────────────────────────────────────────

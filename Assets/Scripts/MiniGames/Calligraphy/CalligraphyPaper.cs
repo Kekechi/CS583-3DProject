@@ -11,15 +11,15 @@ using UnityEngine;
 public class CalligraphyPaper : MonoBehaviour
 {
   [Header("Camera Position")]
-  [Tooltip("Transform child that defines where camera should move to view this paper")]
-  [SerializeField] private Transform cameraPosition;
+  [Tooltip("Transform for zoomed view on the stroke area (wide view is on CameraController)")]
+  [SerializeField] private Transform cameraPositionZoomed;
 
-  [Header("Stroke Positions (Local Space)")]
-  [Tooltip("Start position of the stroke in local coordinates")]
-  [SerializeField] private Vector3 strokeStartLocal = new Vector3(-0.3f, 0.9f, 0f);
+  [Header("Stroke Positions (Transform References)")]
+  [Tooltip("Transform marking the start point of the stroke")]
+  [SerializeField] private Transform strokeStartPoint;
 
-  [Tooltip("End position of the stroke in local coordinates")]
-  [SerializeField] private Vector3 strokeEndLocal = new Vector3(0.3f, 0.9f, 0f);
+  [Tooltip("Transform marking the end point of the stroke")]
+  [SerializeField] private Transform strokeEndPoint;
 
   [Header("Line Drawing (Phase 2)")]
   [Tooltip("LineRenderer component for drawing the stroke")]
@@ -28,11 +28,30 @@ public class CalligraphyPaper : MonoBehaviour
   [Tooltip("Width of the stroke line")]
   [SerializeField] private float lineWidth = 0.05f;
 
+  [Tooltip("Z offset to render line above paper/characters (negative = towards camera)")]
+  [SerializeField] private float lineZOffset = -0.01f;
+
   [Tooltip("Color while drawing (green = in progress)")]
   [SerializeField] private Color drawingColor = Color.green;
 
   [Tooltip("Color when stroke complete (black = ink)")]
   [SerializeField] private Color completedColor = Color.black;
+
+  [Header("Visual Feedback (Phase 4)")]
+  [Tooltip("SpriteRenderer for start point highlight")]
+  [SerializeField] private SpriteRenderer startHighlight;
+
+  [Tooltip("SpriteRenderer for end point highlight")]
+  [SerializeField] private SpriteRenderer endHighlight;
+
+  [Tooltip("The character TextMeshPro to change color on completion")]
+  [SerializeField] private TMPro.TMP_Text strokeCharacter;
+
+  [Tooltip("Initial color of the character (gray)")]
+  [SerializeField] private Color characterStartColor = Color.gray;
+
+  [Tooltip("Color of the character after stroke completion (black)")]
+  [SerializeField] private Color characterCompletedColor = Color.black;
 
   // Runtime state
   private bool isDrawing = false;
@@ -42,11 +61,11 @@ public class CalligraphyPaper : MonoBehaviour
   public event Action OnAllStrokesCompleted;
 
   /// <summary>
-  /// Get the camera target transform for this paper.
+  /// Get the zoomed camera view transform (close-up on stroke).
   /// </summary>
-  public Transform GetCameraPosition()
+  public Transform GetCameraPositionZoomed()
   {
-    return cameraPosition;
+    return cameraPositionZoomed;
   }
 
   /// <summary>
@@ -54,7 +73,12 @@ public class CalligraphyPaper : MonoBehaviour
   /// </summary>
   public Vector3 GetCurrentStrokeStart()
   {
-    return transform.TransformPoint(strokeStartLocal);
+    if (strokeStartPoint == null)
+    {
+      Debug.LogWarning("[CalligraphyPaper] strokeStartPoint not assigned!");
+      return transform.position;
+    }
+    return strokeStartPoint.position;
   }
 
   /// <summary>
@@ -62,7 +86,12 @@ public class CalligraphyPaper : MonoBehaviour
   /// </summary>
   public Vector3 GetCurrentStrokeEnd()
   {
-    return transform.TransformPoint(strokeEndLocal);
+    if (strokeEndPoint == null)
+    {
+      Debug.LogWarning("[CalligraphyPaper] strokeEndPoint not assigned!");
+      return transform.position;
+    }
+    return strokeEndPoint.position;
   }
 
   // ============================================================
@@ -89,8 +118,8 @@ public class CalligraphyPaper : MonoBehaviour
     strokeLineRenderer.startColor = drawingColor;
     strokeLineRenderer.endColor = drawingColor;
 
-    // Set both points to start position initially
-    Vector3 startWorld = GetCurrentStrokeStart();
+    // Set both points to start position with Z offset
+    Vector3 startWorld = ApplyZOffset(GetCurrentStrokeStart());
     strokeLineRenderer.SetPosition(0, startWorld);
     strokeLineRenderer.SetPosition(1, startWorld);
 
@@ -116,16 +145,42 @@ public class CalligraphyPaper : MonoBehaviour
     if (!isDrawing || strokeLineRenderer == null)
       return;
 
-    // Update second point to cursor position
-    strokeLineRenderer.SetPosition(1, worldPoint);
+    // Update second point to cursor position with Z offset
+    strokeLineRenderer.SetPosition(1, ApplyZOffset(worldPoint));
   }
 
   /// <summary>
-  /// Complete the current stroke. (Phase 3)
+  /// Apply Z offset to position so line renders above paper surface.
+  /// </summary>
+  private Vector3 ApplyZOffset(Vector3 worldPoint)
+  {
+    // Offset along paper's forward direction (local Z)
+    return worldPoint + transform.forward * lineZOffset;
+  }
+
+  /// <summary>
+  /// Complete the current stroke. Changes line to completed color and fires events.
   /// </summary>
   public void CompleteStroke()
   {
-    Debug.Log("[CalligraphyPaper] CompleteStroke called (stub)");
+    if (!isDrawing)
+      return;
+
+    isDrawing = false;
+
+    // Snap line endpoint to actual end position
+    if (strokeLineRenderer != null)
+    {
+      strokeLineRenderer.SetPosition(1, ApplyZOffset(GetCurrentStrokeEnd()));
+
+      // Change color to completed (black)
+      strokeLineRenderer.startColor = completedColor;
+      strokeLineRenderer.endColor = completedColor;
+    }
+
+    Debug.Log("[CalligraphyPaper] CompleteStroke - Line finalized in black");
+
+    // Fire events
     OnStrokeCompleted?.Invoke(0);
     OnAllStrokesCompleted?.Invoke();
   }
@@ -151,11 +206,37 @@ public class CalligraphyPaper : MonoBehaviour
   }
 
   /// <summary>
-  /// Show or hide the start point highlight. (Phase 4)
+  /// Show or hide the start point highlight.
   /// </summary>
   public void ShowStartHighlight(bool show)
   {
-    // Stub - will control SpriteRenderer in Phase 4
+    if (startHighlight != null)
+    {
+      startHighlight.enabled = show;
+    }
+  }
+
+  /// <summary>
+  /// Show or hide the end point highlight.
+  /// </summary>
+  public void ShowEndHighlight(bool show)
+  {
+    if (endHighlight != null)
+    {
+      endHighlight.enabled = show;
+    }
+  }
+
+  /// <summary>
+  /// Change the stroke character color to completed state.
+  /// </summary>
+  public void RevealCharacter()
+  {
+    if (strokeCharacter != null)
+    {
+      strokeCharacter.color = characterCompletedColor;
+      Debug.Log("[CalligraphyPaper] Character color changed to completed");
+    }
   }
 
   /// <summary>

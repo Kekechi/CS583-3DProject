@@ -2277,13 +2277,13 @@ Transform:
   m_PrefabAsset: {fileID: 0}
   m_GameObject: {fileID: 963194225}
   serializedVersion: 2
-  m_LocalRotation: {x: -0, y: -0, z: -0, w: 1}
-  m_LocalPosition: {x: 0, y: 3.85, z: 4.3}
+  m_LocalRotation: {x: 0.041010913, y: -0.7502126, z: 0.04673929, w: 0.65826637}
+  m_LocalPosition: {x: 0, y: 4, z: 0}
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children: []
   m_Father: {fileID: 0}
-  m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
+  m_LocalEulerAnglesHint: {x: 7.13, y: -97.47, z: 0}
 --- !u!114 &963194229
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -2615,67 +2615,6 @@ RectTransform:
   m_AnchoredPosition: {x: 0, y: 0}
   m_SizeDelta: {x: 0, y: 0}
   m_Pivot: {x: 0, y: 0}
---- !u!1001 &1008874031
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 0}
-    m_Modifications:
-    - target: {fileID: 1472776984609863032, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_IsActive
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: -6.49
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 4.85
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: -2
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 0.7071068
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: -0.7071068
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: -90
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_Name
-      value: CalligraphyPaper
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
 --- !u!1 &1035632767
 GameObject:
   m_ObjectHideFlags: 0
@@ -3307,11 +3246,6 @@ MonoBehaviour:
   lanternPrefab: {fileID: 7631074988119963334, guid: 4cb2174fe58d18d498abab7a42ce13d3, type: 3}
   roomLanternPrefab: {fileID: 7631074988119963334, guid: 4cb2174fe58d18d498abab7a42ce13d3, type: 3}
   spawnPoint: {fileID: 816665353}
---- !u!4 &1244602145 stripped
-Transform:
-  m_CorrespondingSourceObject: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-  m_PrefabInstance: {fileID: 5069306628007816931}
-  m_PrefabAsset: {fileID: 0}
 --- !u!1 &1275436888
 GameObject:
   m_ObjectHideFlags: 0
@@ -4639,7 +4573,6 @@ Transform:
   m_LocalScale: {x: 1, y: 1, z: 1}
   m_ConstrainProportionsScale: 0
   m_Children:
-  - {fileID: 1244602145}
   - {fileID: 516089962}
   m_Father: {fileID: 1275436889}
   m_LocalEulerAnglesHint: {x: 0, y: 0, z: 0}
@@ -4658,10 +4591,14 @@ MonoBehaviour:
   design: {fileID: 11400000, guid: c8ca8e9adeb61ca40a00d1a30ac6f0f2, type: 2}
   spawnPoint: {fileID: 516089962}
   gameCamera: {fileID: 963194227}
-  cameraController: {fileID: 0}
+  cameraController: {fileID: 963194229}
   paperLayer:
     serializedVersion: 2
     m_Bits: 128
+  startRadius: 0.15
+  endRadius: 0.2
+  initialPauseTime: 1
+  postCompletionPause: 0.5
 --- !u!1 &2112142915
 GameObject:
   m_ObjectHideFlags: 0
@@ -4945,67 +4882,6 @@ PrefabInstance:
     m_AddedGameObjects: []
     m_AddedComponents: []
   m_SourcePrefab: {fileID: 100100000, guid: f6b35c1434459444c815e374a1da8677, type: 3}
---- !u!1001 &5069306628007816931
-PrefabInstance:
-  m_ObjectHideFlags: 0
-  serializedVersion: 2
-  m_Modification:
-    serializedVersion: 3
-    m_TransformParent: {fileID: 2034299277}
-    m_Modifications:
-    - target: {fileID: 654966372618516313, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_Camera
-      value: 
-      objectReference: {fileID: 963194227}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.y
-      value: 3
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalPosition.z
-      value: 4.9
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.w
-      value: 1
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalRotation.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.x
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.y
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 4226889966984042695, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_LocalEulerAnglesHint.z
-      value: 0
-      objectReference: {fileID: 0}
-    - target: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-      propertyPath: m_Name
-      value: CalligraphyPaper
-      objectReference: {fileID: 0}
-    m_RemovedComponents: []
-    m_RemovedGameObjects: []
-    m_AddedGameObjects: []
-    m_AddedComponents: []
-  m_SourcePrefab: {fileID: 100100000, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
 --- !u!1001 &6284547974851941780
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -5082,4 +4958,3 @@ SceneRoots:
   - {fileID: 1275436889}
   - {fileID: 1002159872}
   - {fileID: 1510474383}
-  - {fileID: 1008874031}

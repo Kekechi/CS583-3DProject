@@ -16,4 +16,4 @@ MonoBehaviour:
   phraseReading: Ichigoichie
   phraseMeaning: Once-in-a-lifetime encounter
   paperPrefab: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-  scrollPrefab: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
+  scrollPrefab: {fileID: 8574706960239500837, guid: 59d6dfd7622042546bc3123208bc183e, type: 3}

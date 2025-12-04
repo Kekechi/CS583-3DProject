@@ -32,6 +32,7 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Camera gameCamera;
     [SerializeField] private CameraController cameraController;
+    [SerializeField] private CalligraphyUI calligraphyUI;
 
     [Header("Raycast Settings")]
     [SerializeField] private LayerMask paperLayer;
@@ -92,7 +93,13 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         SpawnPaper();
         startTime = Time.time;
 
-        // 2. Start the full game sequence
+        // 2. Show UI (rootPanel active, success panel hidden until completion)
+        if (calligraphyUI != null)
+        {
+            calligraphyUI.Show();
+        }
+
+        // 3. Start the full game sequence
         if (gameSequenceCoroutine != null)
             StopCoroutine(gameSequenceCoroutine);
         gameSequenceCoroutine = StartCoroutine(GameSequence());
@@ -107,6 +114,12 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         {
             StopCoroutine(gameSequenceCoroutine);
             gameSequenceCoroutine = null;
+        }
+
+        // Hide all UI
+        if (calligraphyUI != null)
+        {
+            calligraphyUI.Hide();
         }
 
         currentState = CalligraphyState.Inactive;
@@ -382,9 +395,23 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Step 2: Fire completion event (MiniGameController handles room return)
+        // Step 2: Show success UI (MiniGameController handles wait timing)
         // ─────────────────────────────────────────────────────────────────────
         currentState = CalligraphyState.Complete;
+
+        if (calligraphyUI != null)
+        {
+            yield return calligraphyUI.ShowSuccessAsync();
+            Debug.Log("[CalligraphyGame] Success UI shown - MiniGameController handles wait timing");
+        }
+        else
+        {
+            Debug.LogWarning("[CalligraphyGame] CalligraphyUI not assigned - skipping success display");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 3: Fire completion event (MiniGameController waits, then handles room return)
+        // ─────────────────────────────────────────────────────────────────────
         float completionTime = Time.time - startTime;
 
         // Debug: verify scrollPrefab exists

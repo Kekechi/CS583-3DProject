@@ -486,6 +486,77 @@ public class PlacedItemData
 
 ---
 
+## **Game Loop Design**
+
+### **Overview**
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│                     FULL GAME LOOP                              │
+├─────────────────────────────────────────────────────────────────┤
+│                                                                 │
+│   MAIN MENU (Separate Scene)                                    │
+│       ├── Start Room → Fade → Load Room scene                   │
+│       ├── Store/Skills → (Disabled, "Coming Soon")              │
+│       └── Exit → Quit application                               │
+│                                                                 │
+│   ROOM (Single Scene - Reused)                                  │
+│       → Complete 3 mini-games                                   │
+│       → Place 3 items                                           │
+│       → Room Complete! → Shows completion popup                 │
+│       → "Continue" → Fade → Back to Main Menu                   │
+│                                                                 │
+│   PROGRESSION (Future)                                          │
+│       → Different item variants each playthrough                │
+│       → Unlock new customizations                               │
+│       → Skill upgrades for mini-games                           │
+│                                                                 │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+### **Design Decisions**
+
+| Decision       | Choice                 | Reason                   |
+| -------------- | ---------------------- | ------------------------ |
+| Menu structure | Separate scene         | Cleaner state management |
+| Room count     | Single room (reused)   | Simpler, focus on polish |
+| Completion UI  | Simple popup           | MVP scope                |
+| Store button   | Disabled "Coming Soon" | Teases future features   |
+| Transitions    | Fade to black          | Polished but simple      |
+| Replay         | Full room reset        | Clean replayability      |
+
+### **Scene Structure**
+
+```
+Scenes/
+├── MainMenu
+│   └── Canvas
+│       ├── Title ("The Little Zen Atelier")
+│       ├── StartButton → Load Room
+│       ├── StoreButton → Disabled
+│       └── ExitButton → Quit
+│
+├── Room (existing)
+│   └── RoomCompleteUI (new)
+│       ├── Panel (hidden)
+│       ├── "Room Complete!" text
+│       └── ContinueButton → Load MainMenu
+│
+└── (Persistent - DontDestroyOnLoad)
+    └── TransitionCanvas (fade panel)
+```
+
+### **New Scripts for Game Loop**
+
+| Script                 | Purpose                           |
+| ---------------------- | --------------------------------- |
+| `MainMenuUI.cs`        | Handle menu button clicks         |
+| `SceneLoader.cs`       | Fade + async scene loading        |
+| `RoomCompleteUI.cs`    | Completion popup, continue button |
+| `TransitionManager.cs` | DontDestroyOnLoad fade panel      |
+
+---
+
 ## **Testing Workflow**
 
 ### **Context Menu Tests (Already Implemented):**
@@ -516,6 +587,8 @@ void TestCompleteMiniGame() { }
 - RoomController (spot management, item placement)
 - MiniGameController (game lifecycle, camera transitions)
 - LanternGame (brightness balancing mini-game)
+- OrigamiGame (directional input mini-game)
+- CalligraphyGame (stroke tracing mini-game)
 - IMiniGame interface + dictionary pattern
 - ICustomizableItem interface + data application
 - Event-driven architecture
@@ -526,16 +599,54 @@ void TestCompleteMiniGame() { }
 
 - UIManager (exists but not integrated)
 - Audio system (placeholder methods)
-- Harmony meter UI (TODO)
 
-### **❌ Not Implemented:**
+### **❌ Not Implemented (Remaining Tasks):**
 
-- Origami mini-game
-- Calligraphy mini-game
-- Save/load system
-- Multi-scene management
-- Room completion UI
-- Settings/pause menu
+#### **Priority 1: Core Game Loop**
+
+- [ ] SceneLoader + TransitionManager (fade system)
+- [ ] MainMenu scene + MainMenuUI
+- [ ] RoomCompleteUI (popup when 3/3 items placed)
+- [ ] GameManager room completion tracking + reset
+
+#### **Priority 2: Polish**
+
+- [ ] Harmony meter UI (progress bar 0/3 → 3/3)
+- [ ] Calligraphy Phase 8 (particle effects, sounds)
+- [ ] Ghost visuals at empty placement spots
+
+#### **Priority 3: Future Features**
+
+- [ ] Store/Skills system
+- [ ] Save/load with PlayerPrefs
+- [ ] Settings/pause menu
+- [ ] Audio integration (ambient, SFX)
+
+---
+
+## **Implementation Order (Recommended)**
+
+```
+Phase A: Game Loop Foundation
+  1. SceneLoader.cs + TransitionManager.cs (fade system)
+  2. MainMenu scene + MainMenuUI.cs
+  3. Test: Menu → Room transition works
+
+Phase B: Room Completion
+  4. GameManager: Add itemsPlaced tracking, OnRoomComplete event
+  5. RoomCompleteUI.cs (popup panel)
+  6. Test: Complete 3 mini-games → popup appears
+
+Phase C: Full Loop
+  7. Wire ContinueButton → Load MainMenu
+  8. Add room reset logic (clear items, reset spots)
+  9. Test: Full loop (Menu → Room → Complete → Menu → Replay)
+
+Phase D: Polish (Optional)
+  10. Harmony meter UI
+  11. Transition timing/easing
+  12. Menu visual polish
+```
 
 ---
 

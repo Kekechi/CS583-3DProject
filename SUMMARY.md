@@ -604,8 +604,11 @@ void TestCompleteMiniGame() { }
 
 #### **Priority 1: Core Game Loop**
 
-- [ ] SceneLoader + TransitionManager (fade system)
-- [ ] MainMenu scene + MainMenuUI
+- [x] SceneLoader.cs (static utility for scene loading) ✅
+- [x] TransitionManager.cs (fade system singleton) ✅
+- [x] MainMenuUI.cs (button handlers) ✅
+- [ ] MainMenu scene setup (see GAME_LOOP_SETUP.md)
+- [ ] TransitionCanvas prefab (fade panel)
 - [ ] RoomCompleteUI (popup when 3/3 items placed)
 - [ ] GameManager room completion tracking + reset
 
@@ -627,25 +630,35 @@ void TestCompleteMiniGame() { }
 ## **Implementation Order (Recommended)**
 
 ```
-Phase A: Game Loop Foundation
-  1. SceneLoader.cs + TransitionManager.cs (fade system)
-  2. MainMenu scene + MainMenuUI.cs
-  3. Test: Menu → Room transition works
+Phase A: Game Loop Foundation ✅ COMPLETE
+  1. ✅ SceneLoader.cs (static utility for scene loading)
+  2. ✅ TransitionManager.cs (fade system singleton)
+  3. ✅ MainMenuUI.cs (button handlers)
+  4. 📋 Setup: Create TransitionCanvas prefab (see GAME_LOOP_SETUP.md)
+  5. 📋 Setup: Create MainMenu scene (see GAME_LOOP_SETUP.md)
+  6. Test: Menu → Room transition works
 
-Phase B: Room Completion
-  4. GameManager: Add itemsPlaced tracking, OnRoomComplete event
-  5. RoomCompleteUI.cs (popup panel)
-  6. Test: Complete 3 mini-games → popup appears
+Phase B: In-Game UI
+  7. GameHUD.cs (parent for in-game UI elements)
+  8. ProgressChecklistUI.cs (shows 0/3, 1/3, etc.)
+  9. SpotInfoPanel.cs (hover info on placement spots)
+  10. Test: Progress updates when items placed
 
-Phase C: Full Loop
-  7. Wire ContinueButton → Load MainMenu
-  8. Add room reset logic (clear items, reset spots)
-  9. Test: Full loop (Menu → Room → Complete → Menu → Replay)
+Phase C: Room Completion
+  11. GameManager: Add itemsPlaced tracking, OnRoomComplete event
+  12. RoomCompleteUI.cs (popup panel)
+  13. "Finish Room" button (optional early completion)
+  14. Test: Complete 3 mini-games → popup appears
 
-Phase D: Polish (Optional)
-  10. Harmony meter UI
-  11. Transition timing/easing
-  12. Menu visual polish
+Phase D: Full Loop
+  15. Wire ContinueButton → Load MainMenu
+  16. Add room reset logic (clear items, reset spots)
+  17. Test: Full loop (Menu → Room → Complete → Menu → Replay)
+
+Phase E: Polish (Optional)
+  18. Harmony meter UI animation
+  19. Transition timing/easing
+  20. Menu visual polish
 ```
 
 ---
@@ -657,13 +670,18 @@ Assets/Scripts/
 ├── Managers/
 │   ├── GameManager.cs          # Global state & coordination
 │   ├── RoomController.cs       # Placement & room logic
-│   └── MiniGameController.cs   # Mini-game lifecycle
+│   ├── MiniGameController.cs   # Mini-game lifecycle
+│   ├── SceneLoader.cs          # Static scene loading utility ⭐ NEW
+│   └── TransitionManager.cs    # Fade transition singleton ⭐ NEW
 ├── MiniGames/
 │   ├── IMiniGame.cs            # Mini-game interface
 │   ├── LanternGame.cs          # Lantern mini-game
-│   └── Lantern/
-│       ├── LanternVisual.cs    # Mini-game visual
-│       └── LanternResult.cs    # Result data
+│   ├── Lantern/
+│   │   ├── LanternVisual.cs    # Mini-game visual
+│   │   └── LanternResult.cs    # Result data
+│   └── Calligraphy/
+│       ├── CalligraphyGame.cs  # Calligraphy mini-game
+│       └── CalligraphyUI.cs    # Calligraphy UI
 ├── Items/
 │   └── LanternItem.cs          # Room item with customization
 ├── Data/
@@ -672,7 +690,13 @@ Assets/Scripts/
 │   └── MiniGameType.cs         # Enum of game types
 ├── ICustomizableItem.cs        # Customization interface
 └── UI/
-    └── LanternUI.cs            # Lantern mini-game UI
+    ├── LanternUI.cs            # Lantern mini-game UI
+    └── MainMenuUI.cs           # Main menu buttons ⭐ NEW
+
+Assets/Scenes/
+├── MainMenu.unity              # Main menu scene (to be created)
+├── SampleScene.unity           # Room scene
+└── GAME_LOOP_SETUP.md          # Setup guide ⭐ NEW
 ```
 
 ---

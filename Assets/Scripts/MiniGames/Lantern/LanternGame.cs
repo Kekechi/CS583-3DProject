@@ -51,6 +51,8 @@ public class LanternGame : MonoBehaviour, IMiniGame
 
     // IMiniGame implementation
     public MiniGameType GameType => MiniGameType.Lantern;
+    public string GameName => "Lantern";
+    public string GameDescription => "Balance the light";
 
     /// <summary>
     /// Start the mini-game: spawn lantern, show UI, reset state

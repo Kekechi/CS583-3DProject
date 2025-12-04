@@ -34,6 +34,8 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
 
   // IMiniGame implementation
   public MiniGameType GameType => MiniGameType.Origami;
+  public string GameName => "Origami";
+  public string GameDescription => "Fold the paper";
 
   /// <summary>
   /// Start the mini-game: show paper, show UI, reset state

@@ -249,9 +249,11 @@ public class RoomController : MonoBehaviour
     {
         if (itemsPlaced >= totalRequiredItems)
         {
-            Debug.Log("[RoomController] Room complete!");
-            OnRoomComplete?.Invoke();
-            // GameManager subscribes to OnRoomComplete event and changes its own state
+            Debug.Log("[RoomController] All items placed - waiting for player to click Finish Room button");
+            // NOTE: We no longer auto-fire OnRoomComplete here.
+            // The ProgressChecklistUI shows the Finish Room button, and player clicks it
+            // to trigger GameManager.ChangeState(RoomCompletion).
+            // OnRoomComplete?.Invoke();
         }
     }
 

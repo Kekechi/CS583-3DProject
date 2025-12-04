@@ -65,6 +65,8 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     // IMiniGame Implementation
     // ─────────────────────────────────────────────────────────────────────────
     public MiniGameType GameType => MiniGameType.Calligraphy;
+    public string GameName => "Calligraphy";
+    public string GameDescription => "Trace the brush strokes";
 
     // ─────────────────────────────────────────────────────────────────────────
     // Unity Lifecycle

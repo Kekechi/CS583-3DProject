@@ -40,6 +40,18 @@ public class MiniGameController : MonoBehaviour
     /// </summary>
     public bool IsTransitioning => isTransitioning;
 
+    /// <summary>
+    /// Get a mini-game by type (for UI info display)
+    /// </summary>
+    public IMiniGame GetMiniGame(MiniGameType gameType)
+    {
+        if (miniGames != null && miniGames.TryGetValue(gameType, out IMiniGame game))
+        {
+            return game;
+        }
+        return null;
+    }
+
     void Start()
     {
         Debug.Log("[MiniGameController] Start called");

@@ -12,6 +12,16 @@ public interface IMiniGame
   MiniGameType GameType { get; }
 
   /// <summary>
+  /// Display name for UI (e.g., "Lantern Game")
+  /// </summary>
+  string GameName { get; }
+
+  /// <summary>
+  /// Short description for hover tooltip
+  /// </summary>
+  string GameDescription { get; }
+
+  /// <summary>
   /// Start the mini-game
   /// Called when player triggers this game
   /// </summary>

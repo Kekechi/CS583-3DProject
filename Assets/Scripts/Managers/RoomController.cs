@@ -53,6 +53,10 @@ public class RoomController : MonoBehaviour
     void Start()
     {
         Debug.Log("[RoomController] Start called");
+
+        // Reset room state on scene load (ensures fresh start)
+        ResetRoom();
+
         InitializeRoom();
         SubscribeToEvents();
     }
@@ -101,12 +105,12 @@ public class RoomController : MonoBehaviour
             return;
         }
 
-        // Show all ghost visuals
+        // Show ghost visuals only for unoccupied spots
         foreach (var spot in allSpots)
         {
             if (spot != null)
             {
-                spot.ShowGhost(true);
+                spot.ShowGhost(!spot.isOccupied);
             }
         }
 
@@ -223,6 +227,9 @@ public class RoomController : MonoBehaviour
         // Mark the spot as occupied
         spot.MarkOccupied(item);
 
+        // Disable all other spots that trigger the same mini-game type
+        DisableSpotsForMiniGame(spot.triggersGame);
+
         // Track the placement
         placedItems[spot] = item;
         itemsPlaced++;
@@ -232,14 +239,30 @@ public class RoomController : MonoBehaviour
         // Fire event
         OnItemPlaced?.Invoke(spot, item);
 
-        // Update harmony meter
-        UpdateHarmonyMeter(itemsPlaced);
-
         // Check for room completion
         CheckRoomCompletion();
 
         // Clear the stored spot
         currentTriggeredSpot = null;
+    }
+
+    /// <summary>
+    /// Disable all spots that trigger a specific mini-game type.
+    /// Called when a mini-game is completed to hide ghosts from all related spots.
+    /// </summary>
+    void DisableSpotsForMiniGame(MiniGameType gameType)
+    {
+        if (allSpots == null) return;
+
+        foreach (var spot in allSpots)
+        {
+            if (spot != null && spot.triggersGame == gameType && !spot.isOccupied)
+            {
+                // Disable the spot (hides ghost, blocks interactions)
+                spot.Disable();
+                Debug.Log($"[RoomController] Disabled spot {spot.gameObject.name} (same mini-game type: {gameType})");
+            }
+        }
     }
 
     /// <summary>
@@ -274,6 +297,46 @@ public class RoomController : MonoBehaviour
     }
 
     /// <summary>
+    /// Reset the room to initial state (for replay)
+    /// Called on scene Start() to ensure fresh state
+    /// </summary>
+    public void ResetRoom()
+    {
+        Debug.Log("[RoomController] Resetting room...");
+
+        // Destroy all placed items
+        if (placedItems != null)
+        {
+            foreach (var kvp in placedItems)
+            {
+                if (kvp.Value != null)
+                {
+                    Destroy(kvp.Value);
+                }
+            }
+            placedItems.Clear();
+        }
+
+        // Reset all placement spots
+        if (allSpots != null)
+        {
+            foreach (var spot in allSpots)
+            {
+                if (spot != null)
+                {
+                    spot.ClearPlacement();
+                }
+            }
+        }
+
+        // Reset counters
+        itemsPlaced = 0;
+        currentTriggeredSpot = null;
+
+        Debug.Log("[RoomController] Room reset complete");
+    }
+
+    /// <summary>
     /// Check if a specific spot is occupied
     /// </summary>
     public bool IsSpotOccupied(PlacementSpot spot)
@@ -281,17 +344,4 @@ public class RoomController : MonoBehaviour
         return spot != null && spot.isOccupied;
     }
 
-    // ===== LEGACY METHODS (for GameManager compatibility) =====
-
-    public void UpdateHarmonyMeter(int itemsPlaced)
-    {
-        Debug.Log($"[RoomController] UpdateHarmonyMeter: {itemsPlaced}/{totalRequiredItems}");
-        // TODO: Update UI harmony meter when implemented
-
-        if (itemsPlaced >= totalRequiredItems)
-        {
-            if (AudioManager.Instance != null)
-                AudioManager.Instance.PlayHarmonyChime();
-        }
-    }
 }

@@ -56,6 +56,12 @@ public class PlacementSpot : MonoBehaviour
   /// </summary>
   public void SetTargeted(bool targeted)
   {
+    // Don't allow targeting if already occupied (mini-game completed)
+    if (isOccupied && targeted)
+    {
+      return;
+    }
+
     // Only update if state changed
     if (isTargeted != targeted)
     {
@@ -88,6 +94,12 @@ public class PlacementSpot : MonoBehaviour
   {
     if (!isOccupied)
     {
+      // Play spot click sound
+      if (AudioManager.Instance != null)
+      {
+        AudioManager.Instance.PlaySpotClick();
+      }
+
       OnClicked?.Invoke(this);
       Debug.Log($"[PlacementSpot] {gameObject.name} clicked - starting {triggersGame} mini-game");
     }
@@ -110,6 +122,8 @@ public class PlacementSpot : MonoBehaviour
   /// </summary>
   void OnMouseEnter()
   {
+    // Don't highlight if already occupied (mini-game completed)
+    if (isOccupied) return;
     SetTargeted(true);
   }
 
@@ -130,7 +144,23 @@ public class PlacementSpot : MonoBehaviour
     placedItem = item;
     ShowGhost(false);
 
+    // Clear any existing highlight state
+    SetTargeted(false);
+
     Debug.Log($"[PlacementSpot] {gameObject.name} is now occupied by {item.name}");
+  }
+
+  /// <summary>
+  /// Disable this spot without placing an item.
+  /// Used when another spot with the same mini-game type is completed.
+  /// </summary>
+  public void Disable()
+  {
+    isOccupied = true;  // Reuse isOccupied to block interactions
+    ShowGhost(false);
+    SetTargeted(false);
+
+    Debug.Log($"[PlacementSpot] {gameObject.name} disabled (mini-game type already completed)");
   }
 
   /// <summary>

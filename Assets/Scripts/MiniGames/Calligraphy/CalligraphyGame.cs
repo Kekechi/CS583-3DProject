@@ -297,6 +297,9 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
                     currentPaper.CompleteStroke();
                     currentPaper.RevealCharacter();
 
+                    // Change state IMMEDIATELY to prevent HandleDrawingState from re-enabling highlights
+                    currentState = CalligraphyState.TransitioningBackWide;
+
                     // Start post-completion sequence (zoom back to wide)
                     StartCoroutine(PostCompletionSequence());
                     return;
@@ -384,7 +387,18 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         Debug.Log("[CalligraphyGame] Stroke completed! Starting post-completion sequence...");
 
         // ─────────────────────────────────────────────────────────────────────
-        // Step 1: Transition back to wide view (calligraphyPosition on CameraController)
+        // Step 1: Wait for character fade animation to complete
+        // ─────────────────────────────────────────────────────────────────────
+        if (currentPaper != null && currentPaper.IsFading)
+        {
+            Debug.Log("[CalligraphyGame] Waiting for character fade animation...");
+            yield return new WaitUntil(() => !currentPaper.IsFading);
+            Debug.Log("[CalligraphyGame] Character fade animation complete");
+        }
+
+        // ─────────────────────────────────────────────────────────────────────
+        // Step 2: Transition back to wide view (calligraphyPosition on CameraController)
+        // (State is already TransitioningBackWide from stroke completion - this is a safeguard)
         // ─────────────────────────────────────────────────────────────────────
         currentState = CalligraphyState.TransitioningBackWide;
 
@@ -397,7 +411,7 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         }
 
         // ─────────────────────────────────────────────────────────────────────
-        // Step 2: Show success UI (MiniGameController handles wait timing)
+        // Step 3: Show success UI (MiniGameController handles wait timing)
         // ─────────────────────────────────────────────────────────────────────
         currentState = CalligraphyState.Complete;
 

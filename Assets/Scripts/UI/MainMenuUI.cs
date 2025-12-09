@@ -34,6 +34,12 @@ public class MainMenuUI : MonoBehaviour
   private void Start()
   {
     Debug.Log("[MainMenuUI] Main Menu loaded");
+
+    // Stop any playing ambience when returning to main menu
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.StopAmbience();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -89,6 +95,12 @@ public class MainMenuUI : MonoBehaviour
   {
     Debug.Log("[MainMenuUI] Start button clicked");
 
+    // Play button click sound
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayButtonClick();
+    }
+
     // Prevent multiple clicks during transition
     if (TransitionManager.Instance != null && TransitionManager.Instance.IsTransitioning)
     {
@@ -118,6 +130,12 @@ public class MainMenuUI : MonoBehaviour
   public void OnExitClicked()
   {
     Debug.Log("[MainMenuUI] Exit button clicked");
+
+    // Play button click sound
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayButtonClick();
+    }
 
 #if UNITY_EDITOR
     // Stop play mode in editor

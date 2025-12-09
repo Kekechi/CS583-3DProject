@@ -107,6 +107,7 @@ public class ProgressChecklistUI : MonoBehaviour
         {
           lanternComplete = true;
           UpdateItemVisual(lanternCheckbox, lanternLabel, true);
+          PlayChecklistSound();
           Debug.Log("[ProgressChecklistUI] Lantern marked complete");
         }
         break;
@@ -116,6 +117,7 @@ public class ProgressChecklistUI : MonoBehaviour
         {
           origamiComplete = true;
           UpdateItemVisual(origamiCheckbox, origamiLabel, true);
+          PlayChecklistSound();
           Debug.Log("[ProgressChecklistUI] Origami marked complete");
         }
         break;
@@ -125,6 +127,7 @@ public class ProgressChecklistUI : MonoBehaviour
         {
           calligraphyComplete = true;
           UpdateItemVisual(calligraphyCheckbox, calligraphyLabel, true);
+          PlayChecklistSound();
           Debug.Log("[ProgressChecklistUI] Calligraphy marked complete");
         }
         break;
@@ -203,6 +206,12 @@ public class ProgressChecklistUI : MonoBehaviour
   {
     Debug.Log("[ProgressChecklistUI] Finish Room clicked");
 
+    // Play button click sound
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayButtonClick();
+    }
+
     if (GameManager.Instance != null)
     {
       GameManager.Instance.ChangeState(GameManager.GameState.RoomCompletion);
@@ -210,6 +219,17 @@ public class ProgressChecklistUI : MonoBehaviour
     else
     {
       Debug.LogError("[ProgressChecklistUI] GameManager.Instance is null!");
+    }
+  }
+
+  /// <summary>
+  /// Play checklist completion sound.
+  /// </summary>
+  private void PlayChecklistSound()
+  {
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayChecklistComplete();
     }
   }
 

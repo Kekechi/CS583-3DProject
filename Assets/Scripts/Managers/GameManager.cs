@@ -31,16 +31,8 @@ public class GameManager : MonoBehaviour
     void Awake()
     {
         Debug.Log("Game Awake");
-        // Singleton pattern
-        if (Instance == null)
-        {
-            Instance = this;
-            DontDestroyOnLoad(gameObject);
-        }
-        else
-        {
-            Destroy(gameObject);
-        }
+        // Simple singleton (no DontDestroyOnLoad - each scene has its own)
+        Instance = this;
     }
 
     void OnEnable()
@@ -58,7 +50,6 @@ public class GameManager : MonoBehaviour
     void OnDestroy()
     {
         Debug.Log("[GameManager] OnDestroy called");
-        // For DontDestroyOnLoad objects, also cleanup on destroy
         UnsubscribeFromEvents();
     }
 
@@ -66,7 +57,28 @@ public class GameManager : MonoBehaviour
     {
         Debug.Log("[GameManager] Start called");
         SubscribeToEvents();
+        ResetForNewRoom();
+
+        // Start room ambience
+        if (AudioManager.Instance != null)
+        {
+            AudioManager.Instance.PlayAmbience();
+        }
+    }
+
+    /// <summary>
+    /// Reset GameManager state for a new room/replay.
+    /// Called on Start() and can be called when re-entering room scene.
+    /// </summary>
+    public void ResetForNewRoom()
+    {
+        Debug.Log("[GameManager] Resetting for new room...");
+
+        itemsPlacedInCurrentRoom = 0;
+        isTransitioning = false;
         ChangeState(GameState.PlacingItem);
+
+        Debug.Log("[GameManager] Reset complete - ready for new room");
     }
 
     void SubscribeToEvents()

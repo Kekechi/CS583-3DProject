@@ -140,6 +140,12 @@ public class RoomCompleteUI : MonoBehaviour
   {
     Debug.Log("[RoomCompleteUI] Continue clicked - returning to main menu");
 
+    // Play button click sound
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayButtonClick();
+    }
+
     // Disable button to prevent double-clicks
     if (continueButton != null)
     {

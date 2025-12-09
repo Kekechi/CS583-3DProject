@@ -350,6 +350,12 @@ public class MiniGameController : MonoBehaviour
         {
             Debug.Log($"[MiniGameController] Starting transition for {currentMiniGame}");
 
+            // Play mini-game complete sound
+            if (AudioManager.Instance != null)
+            {
+                AudioManager.Instance.PlayMiniGameComplete();
+            }
+
             // Phase 1: Show success UI (already shown by mini-game)
             // Just wait for display time or skip
             float elapsed = 0f;

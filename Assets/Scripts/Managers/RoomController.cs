@@ -204,7 +204,9 @@ public class RoomController : MonoBehaviour
         Transform anchor = spot.itemAnchor != null ? spot.itemAnchor : spot.transform;
 
         // Instantiate the item at the anchor's position
-        GameObject item = Instantiate(itemPrefab, anchor.position, anchor.rotation);
+        GameObject item = Instantiate(itemPrefab);
+        item.transform.position = anchor.position;
+        item.transform.rotation = Quaternion.Euler(anchor.rotation.eulerAngles + item.transform.rotation.eulerAngles);
 
         // Apply customization if the item supports it
         ICustomizableItem customizable = item.GetComponent<ICustomizableItem>();

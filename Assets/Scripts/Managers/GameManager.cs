@@ -212,6 +212,17 @@ public class GameManager : MonoBehaviour
         }
 
         Debug.Log("[GameManager] Room complete! All items placed.");
+
+        // Track completion for unlocks
+        if (UnlockManager.Instance != null)
+        {
+            UnlockManager.Instance.CompleteRoom();
+        }
+        else
+        {
+            Debug.LogWarning("[GameManager] UnlockManager not found - progress not tracked");
+        }
+
         ChangeState(GameState.RoomCompletion);
         // Future: Transition to next room, show completion UI, etc.
     }

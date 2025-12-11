@@ -17,6 +17,10 @@ public class RoomCompleteUI : MonoBehaviour
   [SerializeField] private TMP_Text titleText;
   [SerializeField] private Button continueButton;
 
+  [Header("Unlock Notification")]
+  [SerializeField] private GameObject unlockNotificationPanel;
+  [SerializeField] private TMP_Text unlockText;
+
   [Header("Future: Quality Rating")]
   [SerializeField] private GameObject ratingContainer;
   // Future: Add star images, harmony score text, etc.
@@ -112,6 +116,9 @@ public class RoomCompleteUI : MonoBehaviour
       titleText.text = completionTitle;
     }
 
+    // Check for new unlocks
+    ShowUnlockNotification();
+
     // Hide rating container for now (future feature)
     if (ratingContainer != null)
     {
@@ -119,6 +126,40 @@ public class RoomCompleteUI : MonoBehaviour
     }
 
     Debug.Log("[RoomCompleteUI] Shown");
+  }
+
+  /// <summary>
+  /// Check and display any new unlock notifications.
+  /// </summary>
+  private void ShowUnlockNotification()
+  {
+    if (UnlockManager.Instance == null) return;
+
+    string latestUnlock = UnlockManager.Instance.GetLatestUnlock();
+
+    if (!string.IsNullOrEmpty(latestUnlock))
+    {
+      // Show unlock notification
+      if (unlockNotificationPanel != null)
+      {
+        unlockNotificationPanel.SetActive(true);
+      }
+
+      if (unlockText != null)
+      {
+        unlockText.text = $"🎉 NEW UNLOCK!\n\n{latestUnlock}";
+      }
+
+      Debug.Log($"[RoomCompleteUI] Showing unlock notification: {latestUnlock}");
+    }
+    else
+    {
+      // Hide unlock notification
+      if (unlockNotificationPanel != null)
+      {
+        unlockNotificationPanel.SetActive(false);
+      }
+    }
   }
 
   /// <summary>

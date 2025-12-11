@@ -7,10 +7,6 @@ using UnityEngine;
 /// </summary>
 public class OrigamiGame : MonoBehaviour, IMiniGame
 {
-  [Header("Design")]
-  [Tooltip("The origami design to use (arrow sequence, final model)")]
-  public OrigamiDesign currentDesign;
-
   [Header("References")]
   [Tooltip("Reference to the UI controller")]
   public OrigamiUI ui;
@@ -22,6 +18,7 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
   public Transform modelSpawnPoint;
 
   // State
+  private OrigamiDesign design; // Runtime-selected design
   private int currentIndex = 0;
   private bool isPlaying = false;
 
@@ -37,12 +34,16 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
   public string GameName => "Origami";
   public string GameDescription => "Fold the paper";
 
+
+
   /// <summary>
   /// Start the mini-game: show paper, show UI, reset state
   /// </summary>
   [ContextMenu("Start Game")]
   public void StartGame()
   {
+    // Select design based on unlock status
+    design = SelectDesign();
     isPlaying = true;
     currentIndex = 0;
 
@@ -58,7 +59,7 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
     // Setup and show UI
     if (ui != null)
     {
-      ui.Setup(currentDesign.arrowSequence);
+      ui.Setup(design.arrowSequence);
       ui.Show();
     }
 
@@ -105,10 +106,10 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
   /// </summary>
   void CheckInput()
   {
-    if (currentDesign == null || currentDesign.arrowSequence == null) return;
-    if (currentIndex >= currentDesign.arrowSequence.Length) return;
+    if (design == null || design.arrowSequence == null) return;
+    if (currentIndex >= design.arrowSequence.Length) return;
 
-    KeyCode expected = currentDesign.arrowSequence[currentIndex];
+    KeyCode expected = design.arrowSequence[currentIndex];
 
     // Check for correct input
     if (Input.GetKeyDown(expected))
@@ -144,13 +145,13 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
       ui.MarkComplete(currentIndex);
     }
 
-    Debug.Log($"[OrigamiGame] Correct! Arrow {currentIndex + 1}/{currentDesign.arrowSequence.Length}");
+    Debug.Log($"[OrigamiGame] Correct! Arrow {currentIndex + 1}/{design.arrowSequence.Length}");
 
     // Advance progress
     currentIndex++;
 
     // Check for completion
-    if (currentIndex >= currentDesign.arrowSequence.Length)
+    if (currentIndex >= design.arrowSequence.Length)
     {
       CompleteGame();
     }
@@ -192,14 +193,14 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
     // Fire completion event
     OrigamiResult result = new OrigamiResult
     {
-      roomItemPrefab = currentDesign.roomItemPrefab,
-      designName = currentDesign.designName,
+      roomItemPrefab = design.roomItemPrefab,
+      designName = design.designName,
       CompletionTime = Time.time
     };
 
     OnGameCompleted?.Invoke(result);
 
-    Debug.Log($"[OrigamiGame] Game completed - {currentDesign.designName}");
+    Debug.Log($"[OrigamiGame] Game completed - {design.designName}");
   }
 
   /// <summary>
@@ -207,7 +208,7 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
   /// </summary>
   void SpawnModel()
   {
-    if (currentDesign.finalModelPrefab == null)
+    if (design.finalModelPrefab == null)
     {
       Debug.LogWarning("[OrigamiGame] No final model prefab assigned");
       return;
@@ -216,14 +217,33 @@ public class OrigamiGame : MonoBehaviour, IMiniGame
     Vector3 spawnPosition = modelSpawnPoint != null ? modelSpawnPoint.position : transform.position;
     Quaternion spawnRotation = modelSpawnPoint != null ? modelSpawnPoint.rotation : Quaternion.identity;
 
-    spawnedModel = Instantiate(currentDesign.finalModelPrefab, spawnPosition, spawnRotation);
+    spawnedModel = Instantiate(design.finalModelPrefab);
+    spawnedModel.transform.position = spawnPosition;
+    spawnedModel.transform.rotation = Quaternion.Euler(spawnRotation.eulerAngles + spawnedModel.transform.rotation.eulerAngles);
 
     Debug.Log("[OrigamiGame] Final model spawned");
   }
 
   /// <summary>
-  /// Cleanup the spawned model
+  /// Select the appropriate design based on UnlockManager selection
   /// </summary>
+  private OrigamiDesign SelectDesign()
+  {
+    UnlockManager unlockManager = UnlockManager.Instance;
+    if (unlockManager != null)
+    {
+      OrigamiDesign selectedDesign = unlockManager.GetOrigamiDesign();
+      if (selectedDesign != null)
+      {
+        return selectedDesign;
+      }
+    }
+
+    Debug.LogError("[OrigamiGame] UnlockManager or design not available!");
+    return null;
+  }  /// <summary>
+     /// Cleanup the spawned model
+     /// </summary>
   void CleanupModel()
   {
     if (spawnedModel != null)

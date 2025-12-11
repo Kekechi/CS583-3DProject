@@ -28,7 +28,6 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     // Inspector Fields
     // ─────────────────────────────────────────────────────────────────────────
     [Header("References")]
-    [SerializeField] private CalligraphyDesign design;
     [SerializeField] private Transform spawnPoint;
     [SerializeField] private Camera gameCamera;
     [SerializeField] private CameraController cameraController;
@@ -51,6 +50,7 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     // ─────────────────────────────────────────────────────────────────────────
     // Runtime State
     // ─────────────────────────────────────────────────────────────────────────
+    private CalligraphyDesign design; // Runtime-selected design
     private CalligraphyState currentState = CalligraphyState.Inactive;
     private CalligraphyPaper currentPaper;
     private float startTime;
@@ -84,12 +84,17 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         HandleRaycastInput();
     }
 
+
+
     // ─────────────────────────────────────────────────────────────────────────
     // Public Methods
     // ─────────────────────────────────────────────────────────────────────────
     public void StartGame()
     {
         Debug.Log("[CalligraphyGame] StartGame() called");
+
+        // Select design based on unlock status
+        design = SelectDesign();
 
         // 1. Spawn paper first (can happen while camera transitions)
         SpawnPaper();
@@ -139,10 +144,28 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     // ─────────────────────────────────────────────────────────────────────────
     // Private Methods
     // ─────────────────────────────────────────────────────────────────────────
+    /// <summary>
+    /// Select the appropriate design based on UnlockManager selection
+    /// </summary>
+    private CalligraphyDesign SelectDesign()
+    {
+        UnlockManager unlockManager = UnlockManager.Instance;
+        if (unlockManager != null)
+        {
+            CalligraphyDesign selectedDesign = unlockManager.GetCalligraphyDesign();
+            if (selectedDesign != null)
+            {
+                return selectedDesign;
+            }
+        }
+
+        Debug.LogError("[CalligraphyGame] UnlockManager or design not available!");
+        return null;
+    }
+
     private void ValidateReferences()
     {
-        if (design == null)
-            Debug.LogWarning("[CalligraphyGame] CalligraphyDesign not assigned!");
+        // Design is now handled by UnlockManager
 
         if (spawnPoint == null)
             Debug.LogWarning("[CalligraphyGame] SpawnPoint not assigned!");

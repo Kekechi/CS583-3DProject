@@ -1159,7 +1159,7 @@ GameObject:
   - component: {fileID: 4226889966984042695}
   - component: {fileID: 2569668631326268431}
   m_Layer: 0
-  m_Name: CalligraphyPaper
+  m_Name: CalligraphyIchigoichiePaper
   m_TagString: Untagged
   m_Icon: {fileID: 0}
   m_NavMeshLayer: 0

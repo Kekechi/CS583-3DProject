@@ -16,6 +16,9 @@ public class MainMenuUI : MonoBehaviour
   [SerializeField] private Button storeButton;
   [SerializeField] private Button exitButton;
 
+  [Header("UI Panels")]
+  [SerializeField] private StoreUI storeUI;
+
   [Header("Scene Names")]
   [SerializeField] private string gameSceneName = "SampleScene";
 
@@ -58,18 +61,15 @@ public class MainMenuUI : MonoBehaviour
       Debug.LogWarning("[MainMenuUI] startButton not assigned");
     }
 
-    // Store button - disabled (coming soon)
+    // Store button - enabled
     if (storeButton != null)
     {
       storeButton.onClick.AddListener(OnStoreClicked);
-      storeButton.interactable = false;
-
-      // Update button text to show it's disabled
-      TMP_Text buttonText = storeButton.GetComponentInChildren<TMP_Text>();
-      if (buttonText != null)
-      {
-        buttonText.text = $"Store {disabledButtonText}";
-      }
+      storeButton.interactable = true;
+    }
+    else
+    {
+      Debug.LogWarning("[MainMenuUI] storeButton not assigned");
     }
 
     // Exit button - enabled
@@ -116,12 +116,27 @@ public class MainMenuUI : MonoBehaviour
   }
 
   /// <summary>
-  /// Store button clicked - placeholder for future feature.
+  /// Store button clicked - open store UI.
   /// </summary>
   public void OnStoreClicked()
   {
-    Debug.Log("[MainMenuUI] Store button clicked (not implemented)");
-    // Future: Open store/skills screen
+    Debug.Log("[MainMenuUI] Store button clicked");
+
+    // Play button click sound
+    if (AudioManager.Instance != null)
+    {
+      AudioManager.Instance.PlayButtonClick();
+    }
+
+    // Open store UI
+    if (storeUI != null)
+    {
+      storeUI.Show();
+    }
+    else
+    {
+      Debug.LogWarning("[MainMenuUI] StoreUI not assigned!");
+    }
   }
 
   /// <summary>

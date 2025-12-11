@@ -8,15 +8,6 @@ using UnityEngine;
 public class LanternGame : MonoBehaviour, IMiniGame
 {
     [Header("Game Settings")]
-    [Tooltip("Lower bound of harmony zone (0-1)")]
-    [Range(0f, 1f)] public float harmonyZoneMin = 0.4f;
-
-    [Tooltip("Upper bound of harmony zone (0-1)")]
-    [Range(0f, 1f)] public float harmonyZoneMax = 0.6f;
-
-    [Tooltip("Time player must stay in harmony to win (seconds)")]
-    public float goalTime = 10f;
-
     [Tooltip("How fast brightness changes per second")]
     public float brightnessChangeSpeed = 0.3f;
 
@@ -30,13 +21,14 @@ public class LanternGame : MonoBehaviour, IMiniGame
     [Tooltip("Lantern prefab to spawn during the game (visual only)")]
     public GameObject lanternPrefab;
 
-    [Tooltip("Lantern prefab to place in the room after completion")]
-    public GameObject roomLanternPrefab;
-
     [Tooltip("Where to spawn the lantern")]
     public Transform spawnPoint;
 
     // State
+    private LanternDesign design; // Runtime-selected design
+    private float harmonyZoneMin; // Set from design
+    private float harmonyZoneMax; // Set from design
+    private float goalTime; // Set from design
     private float brightness = 0.5f;
     private float timeInHarmony = 0f;
     private bool isPlaying = false;
@@ -54,12 +46,25 @@ public class LanternGame : MonoBehaviour, IMiniGame
     public string GameName => "Lantern";
     public string GameDescription => "Balance the light";
 
+
+
     /// <summary>
     /// Start the mini-game: spawn lantern, show UI, reset state
     /// </summary>
     [ContextMenu("Start Game")]
     public void StartGame()
     {
+        // Select design based on unlock status
+        design = SelectDesign();
+
+        // Load design settings
+        if (design != null)
+        {
+            goalTime = design.goalTime;
+            harmonyZoneMin = design.brightnessRange.x;
+            harmonyZoneMax = design.brightnessRange.y;
+        }
+
         isPlaying = true;
         brightness = 0f; // Start at minimum (player builds up from zero)
         timeInHarmony = 0f;
@@ -155,16 +160,11 @@ public class LanternGame : MonoBehaviour, IMiniGame
     /// </summary>
     void SpawnLantern()
     {
-        if (lanternPrefab == null)
-        {
-            Debug.LogError("[LanternGame] Lantern prefab is not assigned!");
-            return;
-        }
 
         Vector3 spawnPosition = spawnPoint != null ? spawnPoint.position : transform.position;
         Quaternion spawnRotation = spawnPoint != null ? spawnPoint.rotation : Quaternion.identity;
 
-        spawnedLantern = Instantiate(lanternPrefab, spawnPosition, spawnRotation);
+        spawnedLantern = Instantiate(design.roomItemPrefab, spawnPosition, spawnRotation);
         lanternVisual = spawnedLantern.GetComponent<LanternVisual>();
 
         if (lanternVisual == null)
@@ -192,7 +192,7 @@ public class LanternGame : MonoBehaviour, IMiniGame
         // Create result data with the room prefab (not the visual instance)
         LanternResult result = new LanternResult
         {
-            roomItemPrefab = roomLanternPrefab,  // Prefab to place in room
+            roomItemPrefab = design != null ? design.roomItemPrefab : null,  // Prefab from design
             finalBrightness = brightness,         // Customization data
             CompletionTime = Time.time,
             adjustmentsMade = 0 // TODO: Track this if needed
@@ -202,8 +202,25 @@ public class LanternGame : MonoBehaviour, IMiniGame
     }
 
     /// <summary>
-    /// Destroy the spawned lantern instance
+    /// Select the appropriate design based on UnlockManager selection
     /// </summary>
+    private LanternDesign SelectDesign()
+    {
+        UnlockManager unlockManager = UnlockManager.Instance;
+        if (unlockManager != null)
+        {
+            LanternDesign selectedDesign = unlockManager.GetLanternDesign();
+            if (selectedDesign != null)
+            {
+                return selectedDesign;
+            }
+        }
+
+        Debug.LogError("[LanternGame] UnlockManager or design not available!");
+        return null;
+    }    /// <summary>
+         /// Destroy the spawned lantern instance
+         /// </summary>
     void CleanupLantern()
     {
         if (spawnedLantern != null)

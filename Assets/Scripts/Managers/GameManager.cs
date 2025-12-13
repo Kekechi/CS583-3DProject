@@ -127,6 +127,13 @@ public class GameManager : MonoBehaviour
         CurrentState = newState;
 
         Debug.Log($"[GameManager] State changed: {oldState} → {newState}");
+
+        // If transitioning to RoomCompletion, handle unlock tracking
+        if (newState == GameState.RoomCompletion && oldState != GameState.RoomCompletion)
+        {
+            HandleRoomComplete();
+        }
+
         OnStateChanged?.Invoke(oldState, newState);
     }
 
@@ -211,16 +218,17 @@ public class GameManager : MonoBehaviour
             return;
         }
 
-        Debug.Log("[GameManager] Room complete! All items placed.");
+        Debug.Log("[GameManager] ★★★ Room complete! All items placed. ★★★");
 
         // Track completion for unlocks
         if (UnlockManager.Instance != null)
         {
+            Debug.Log("[GameManager] Calling UnlockManager.CompleteRoom()...");
             UnlockManager.Instance.CompleteRoom();
         }
         else
         {
-            Debug.LogWarning("[GameManager] UnlockManager not found - progress not tracked");
+            Debug.LogError("[GameManager] ⚠️ UnlockManager.Instance is NULL - progress not tracked! ⚠️");
         }
 
         ChangeState(GameState.RoomCompletion);

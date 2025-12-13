@@ -21,10 +21,14 @@ public class StoreItemButton : MonoBehaviour
   [SerializeField] private Color lockedTint = new Color(0.5f, 0.5f, 0.5f, 1f);
   [SerializeField] private Color unlockedTint = Color.white;
   [SerializeField] private Color selectedBorderColor = new Color(1f, 0.84f, 0f, 1f); // Gold
+  [SerializeField] private float hoverScale = 1.05f;
+  [SerializeField] private float animationSpeed = 0.1f;
 
   [Header("Item Data")]
   [SerializeField] private string customItemName = ""; // Optional: leave empty to auto-generate
-  [SerializeField] private Sprite itemIcon; private MiniGameType gameType;
+  [SerializeField] private Sprite itemIcon;
+
+  private MiniGameType gameType;
   private ItemVariant variant;
   private bool isUnlocked;
   private bool isSelected;
@@ -41,7 +45,70 @@ public class StoreItemButton : MonoBehaviour
     if (button != null)
     {
       button.onClick.AddListener(HandleClick);
+
+      // Add hover effects using EventTrigger or button navigation
+      var buttonTransform = button.transform;
+      var selectable = button;
+
+      // We'll use Button's built-in navigation to detect hover
+      // But for better control, let's add pointer enter/exit handlers
+      var trigger = button.gameObject.GetComponent<UnityEngine.EventSystems.EventTrigger>();
+      if (trigger == null)
+      {
+        trigger = button.gameObject.AddComponent<UnityEngine.EventSystems.EventTrigger>();
+      }
+
+      // Pointer Enter
+      var entryEnter = new UnityEngine.EventSystems.EventTrigger.Entry();
+      entryEnter.eventID = UnityEngine.EventSystems.EventTriggerType.PointerEnter;
+      entryEnter.callback.AddListener((data) => { OnPointerEnter(); });
+      trigger.triggers.Add(entryEnter);
+
+      // Pointer Exit
+      var entryExit = new UnityEngine.EventSystems.EventTrigger.Entry();
+      entryExit.eventID = UnityEngine.EventSystems.EventTriggerType.PointerExit;
+      entryExit.callback.AddListener((data) => { OnPointerExit(); });
+      trigger.triggers.Add(entryExit);
     }
+  }
+
+  private void OnPointerEnter()
+  {
+    if (button != null && button.interactable)
+    {
+      StartCoroutine(ScaleButton(hoverScale));
+
+      // Play hover sound
+      if (AudioManager.Instance != null)
+      {
+        AudioManager.Instance.PlaySpotClick(); // Subtle hover sound
+      }
+    }
+  }
+
+  private void OnPointerExit()
+  {
+    if (button != null)
+    {
+      StartCoroutine(ScaleButton(1f));
+    }
+  }
+
+  private System.Collections.IEnumerator ScaleButton(float targetScale)
+  {
+    Vector3 startScale = transform.localScale;
+    Vector3 endScale = Vector3.one * targetScale;
+    float elapsed = 0f;
+
+    while (elapsed < animationSpeed)
+    {
+      elapsed += Time.deltaTime;
+      float t = elapsed / animationSpeed;
+      transform.localScale = Vector3.Lerp(startScale, endScale, t);
+      yield return null;
+    }
+
+    transform.localScale = endScale;
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -126,7 +193,25 @@ public class StoreItemButton : MonoBehaviour
   /// </summary>
   private void HandleClick()
   {
+    // Play selection bounce animation
+    if (isUnlocked)
+    {
+      StartCoroutine(SelectionBounce());
+    }
+
     OnClicked?.Invoke();
+  }
+
+  /// <summary>
+  /// Bounce animation when button is selected.
+  /// </summary>
+  private System.Collections.IEnumerator SelectionBounce()
+  {
+    // Quick scale up
+    yield return ScaleButton(1.15f);
+
+    // Scale back to normal
+    yield return ScaleButton(1f);
   }
 
   /// <summary>

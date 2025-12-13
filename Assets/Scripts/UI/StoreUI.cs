@@ -83,7 +83,15 @@ public class StoreUI : MonoBehaviour
   {
     if (storePanel == null) return;
 
+    // IMPORTANT: Activate panel FIRST so coroutines can run
     storePanel.SetActive(true);
+
+    // Set initial alpha for fade-in
+    if (canvasGroup != null)
+    {
+      canvasGroup.alpha = 0f;
+    }
+
     RefreshStore();
 
     // Play audio
@@ -92,7 +100,7 @@ public class StoreUI : MonoBehaviour
       AudioManager.Instance.PlayButtonClick();
     }
 
-    // Fade in
+    // Fade in (now that panel is active)
     if (canvasGroup != null)
     {
       StartCoroutine(FadeIn());

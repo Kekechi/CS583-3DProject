@@ -51,12 +51,17 @@ public class UnlockManager : MonoBehaviour
   /// </summary>
   public void CompleteRoom()
   {
+    Debug.Log($"[UnlockManager] CompleteRoom() called. Current count: {unlockData.roomCompletions}");
+
     unlockData.roomCompletions++;
 
-    Debug.Log($"[UnlockManager] Room completed! Total completions: {unlockData.roomCompletions}");
+    Debug.Log($"[UnlockManager] ★ Room completed! Total completions: {unlockData.roomCompletions} ★");
 
     CheckUnlocks();
     SaveData();
+
+    // Debug: Print current status
+    DebugPrintStatus();
   }
 
   /// <summary>
@@ -119,11 +124,11 @@ public class UnlockManager : MonoBehaviour
   {
     // Check which unlock just happened based on completion count
     if (unlockData.roomCompletions == 1)
-      return "Lantern Style B";
+      return lanternStyleB != null ? lanternStyleB.designName : "Lantern Style B";
     if (unlockData.roomCompletions == 3)
-      return "Origami Style B";
+      return origamiStyleB != null ? origamiStyleB.designName : "Origami Style B";
     if (unlockData.roomCompletions == 6)
-      return "Calligraphy Style B";
+      return calligraphyStyleB != null ? calligraphyStyleB.phraseReading : "Calligraphy Style B";
 
     return string.Empty;
   }

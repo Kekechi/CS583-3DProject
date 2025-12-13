@@ -188,8 +188,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Origami Airplane
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: a7b8832c4eadbe0458838b6d0d276ab4, type: 3}
 --- !u!114 &3354102
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1490,8 +1492,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Classic Lantern
-  itemIcon: {fileID: 21300000, guid: 140cd55bc09d20349b73e9a5ff084676, type: 3}
+  itemIcon: {fileID: 21300000, guid: 6e656738896f72e4a9e617d0c8782c9e, type: 3}
 --- !u!1 &473522103
 GameObject:
   m_ObjectHideFlags: 0
@@ -2564,8 +2568,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Calligraphy Ichigoichie
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: ba70c71542d76254782c39ec4ef1dcbc, type: 3}
 --- !u!114 &909845655
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5324,8 +5330,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Calligraphy ---
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: ba70c71542d76254782c39ec4ef1dcbc, type: 3}
 --- !u!114 &1641761885
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -5548,8 +5556,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Cylinder Lantern
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: 283903063ea899c499f41ecb97f0dbc7, type: 3}
 --- !u!114 &1841222040
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -6240,8 +6250,10 @@ MonoBehaviour:
   lockedTint: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   unlockedTint: {r: 1, g: 1, b: 1, a: 1}
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
+  hoverScale: 1.05
+  animationSpeed: 0.1
   customItemName: Origami Crane
-  itemIcon: {fileID: 0}
+  itemIcon: {fileID: 21300000, guid: b352c3b7c5df46043b6f30e9b8088b81, type: 3}
 --- !u!114 &2009420343
 MonoBehaviour:
   m_ObjectHideFlags: 0

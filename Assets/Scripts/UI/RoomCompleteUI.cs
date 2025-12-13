@@ -147,7 +147,13 @@ public class RoomCompleteUI : MonoBehaviour
 
       if (unlockText != null)
       {
-        unlockText.text = $"🎉 NEW UNLOCK!\n\n{latestUnlock}";
+        unlockText.text = $"{latestUnlock}";
+      }
+
+      // Play unlock sound
+      if (AudioManager.Instance != null)
+      {
+        AudioManager.Instance.PlayChecklistComplete(); // Celebration sound
       }
 
       Debug.Log($"[RoomCompleteUI] Showing unlock notification: {latestUnlock}");

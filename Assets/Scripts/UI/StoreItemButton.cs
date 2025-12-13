@@ -23,9 +23,8 @@ public class StoreItemButton : MonoBehaviour
   [SerializeField] private Color selectedBorderColor = new Color(1f, 0.84f, 0f, 1f); // Gold
 
   [Header("Item Data")]
-  [SerializeField] private Sprite itemIcon;
-
-  private MiniGameType gameType;
+  [SerializeField] private string customItemName = ""; // Optional: leave empty to auto-generate
+  [SerializeField] private Sprite itemIcon; private MiniGameType gameType;
   private ItemVariant variant;
   private bool isUnlocked;
   private bool isSelected;
@@ -131,18 +130,22 @@ public class StoreItemButton : MonoBehaviour
   }
 
   /// <summary>
+  /// <summary>
   /// Get display name for this item.
   /// </summary>
   private string GetItemName()
   {
+    // Use custom name if provided, otherwise auto-generate
+    if (!string.IsNullOrEmpty(customItemName))
+    {
+      return customItemName;
+    }
+
     string typeName = gameType.ToString();
     string variantName = variant == ItemVariant.Default ? "Default" : "Style B";
     return $"{typeName}\n{variantName}";
-  }
-
-  /// <summary>
-  /// Get unlock requirement text for locked items.
-  /// </summary>
+  }  /// Get unlock requirement text for locked items.
+     /// </summary>
   private string GetUnlockRequirementText()
   {
     if (variant == ItemVariant.Default)

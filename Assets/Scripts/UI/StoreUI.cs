@@ -65,6 +65,11 @@ public class StoreUI : MonoBehaviour
     {
       Debug.LogError("[StoreUI] UnlockManager not found!");
     }
+    else
+    {
+      // Initialize all button states immediately
+      RefreshStore();
+    }
   }
 
   // ─────────────────────────────────────────────────────────────────────────
@@ -127,7 +132,17 @@ public class StoreUI : MonoBehaviour
   /// </summary>
   public void RefreshStore()
   {
-    if (unlockManager == null) return;
+    // Ensure we have UnlockManager reference
+    if (unlockManager == null)
+    {
+      unlockManager = UnlockManager.Instance;
+    }
+
+    if (unlockManager == null)
+    {
+      Debug.LogWarning("[StoreUI] Cannot refresh - UnlockManager not found!");
+      return;
+    }
 
     // Refresh all buttons
     RefreshItemButton(lanternDefaultButton, MiniGameType.Lantern, ItemVariant.Default);

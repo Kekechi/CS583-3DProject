@@ -8106,6 +8106,7 @@ MonoBehaviour:
     m_Bits: 128
   startRadius: 0.15
   endRadius: 0.2
+  pathSampleRate: 10
   initialPauseTime: 1
 --- !u!1 &2112142915
 GameObject:

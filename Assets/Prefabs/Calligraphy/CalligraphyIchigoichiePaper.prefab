@@ -1197,15 +1197,20 @@ MonoBehaviour:
   m_Name: 
   m_EditorClassIdentifier: 
   cameraPositionZoomed: {fileID: 5066803698528495233}
-  strokeStartPoint: {fileID: 4795081184785032719}
-  strokeEndPoint: {fileID: 2729092592513052728}
-  strokeLineRenderer: {fileID: 5634900018138643856}
+  strokes:
+  - pathPoints:
+    - {fileID: 4795081184785032719}
+    - {fileID: 2729092592513052728}
+    pointHighlights:
+    - {fileID: 6202878517799126518}
+    - {fileID: 3165276370228856421}
+    lineRenderer: {fileID: 5634900018138643856}
+    tolerance: 0.1
   lineWidth: 0.03
   lineZOffset: -0.02
   drawingColor: {r: 0, g: 1, b: 0, a: 1}
   completedColor: {r: 0, g: 0, b: 0, a: 1}
-  startHighlight: {fileID: 6202878517799126518}
-  endHighlight: {fileID: 3165276370228856421}
   strokeCharacter: {fileID: 8360306655054726121}
   characterStartColor: {r: 0.5, g: 0.5, b: 0.5, a: 1}
   characterCompletedColor: {r: 0, g: 0, b: 0, a: 1}
+  fadeDuration: 0.8

@@ -15,17 +15,11 @@ public class CalligraphyPaper : MonoBehaviour
   [Tooltip("Transform for zoomed view on the stroke area (wide view is on CameraController)")]
   [SerializeField] private Transform cameraPositionZoomed;
 
-  [Header("Stroke Positions (Transform References)")]
-  [Tooltip("Transform marking the start point of the stroke")]
-  [SerializeField] private Transform strokeStartPoint;
+  [Header("Multi-Stroke Configuration")]
+  [Tooltip("Array of strokes that make up this character")]
+  [SerializeField] private System.Collections.Generic.List<StrokeData> strokes = new System.Collections.Generic.List<StrokeData>();
 
-  [Tooltip("Transform marking the end point of the stroke")]
-  [SerializeField] private Transform strokeEndPoint;
-
-  [Header("Line Drawing (Phase 2)")]
-  [Tooltip("LineRenderer component for drawing the stroke")]
-  [SerializeField] private LineRenderer strokeLineRenderer;
-
+  [Header("Line Drawing")]
   [Tooltip("Width of the stroke line")]
   [SerializeField] private float lineWidth = 0.05f;
 
@@ -37,13 +31,6 @@ public class CalligraphyPaper : MonoBehaviour
 
   [Tooltip("Color when stroke complete (black = ink)")]
   [SerializeField] private Color completedColor = Color.black;
-
-  [Header("Visual Feedback (Phase 4)")]
-  [Tooltip("SpriteRenderer for start point highlight")]
-  [SerializeField] private SpriteRenderer startHighlight;
-
-  [Tooltip("SpriteRenderer for end point highlight")]
-  [SerializeField] private SpriteRenderer endHighlight;
 
   [Tooltip("The character TextMeshPro to change color on completion")]
   [SerializeField] private TMPro.TMP_Text strokeCharacter;
@@ -59,13 +46,30 @@ public class CalligraphyPaper : MonoBehaviour
   [SerializeField] private float fadeDuration = 0.8f;
 
   // Runtime state
+  private int currentStrokeIndex = 0;
   private bool isDrawing = false;
   private Coroutine fadeCoroutine;
   private bool isFading = false;
+  private LineRenderer activeLineRenderer;
 
-  // Events (for future phases)
+  // Events
   public event Action<int> OnStrokeCompleted;
   public event Action OnAllStrokesCompleted;
+
+  /// <summary>
+  /// Get the current stroke being worked on.
+  /// </summary>
+  public StrokeData CurrentStroke => (currentStrokeIndex >= 0 && currentStrokeIndex < strokes.Count) ? strokes[currentStrokeIndex] : null;
+
+  /// <summary>
+  /// Get the total number of strokes in this character.
+  /// </summary>
+  public int TotalStrokes => strokes.Count;
+
+  /// <summary>
+  /// Check if all strokes are complete.
+  /// </summary>
+  public bool AllStrokesComplete => currentStrokeIndex >= strokes.Count;
 
   /// <summary>
   /// Check if fade animation is currently playing.
@@ -85,12 +89,12 @@ public class CalligraphyPaper : MonoBehaviour
   /// </summary>
   public Vector3 GetCurrentStrokeStart()
   {
-    if (strokeStartPoint == null)
+    if (CurrentStroke == null || CurrentStroke.pathPoints.Count == 0)
     {
-      Debug.LogWarning("[CalligraphyPaper] strokeStartPoint not assigned!");
+      Debug.LogWarning("[CalligraphyPaper] Current stroke has no path points!");
       return transform.position;
     }
-    return strokeStartPoint.position;
+    return CurrentStroke.StartPoint;
   }
 
   /// <summary>
@@ -98,12 +102,12 @@ public class CalligraphyPaper : MonoBehaviour
   /// </summary>
   public Vector3 GetCurrentStrokeEnd()
   {
-    if (strokeEndPoint == null)
+    if (CurrentStroke == null || CurrentStroke.pathPoints.Count == 0)
     {
-      Debug.LogWarning("[CalligraphyPaper] strokeEndPoint not assigned!");
+      Debug.LogWarning("[CalligraphyPaper] Current stroke has no path points!");
       return transform.position;
     }
-    return strokeEndPoint.position;
+    return CurrentStroke.EndPoint;
   }
 
   // ============================================================
@@ -111,34 +115,79 @@ public class CalligraphyPaper : MonoBehaviour
   // ============================================================
 
   /// <summary>
-  /// Begin drawing a stroke. Initializes the LineRenderer from start point.
+  /// Show guide visuals for the current stroke (highlights for all points).
   /// </summary>
-  public void StartDrawing()
+  public void ShowStrokeGuide()
   {
-    if (strokeLineRenderer == null)
+    if (CurrentStroke == null) return;
+
+    // Show all point highlights
+    for (int i = 0; i < CurrentStroke.pointHighlights.Count; i++)
     {
-      Debug.LogError("[CalligraphyPaper] No LineRenderer assigned!");
-      return;
+      if (CurrentStroke.pointHighlights[i] != null)
+      {
+        CurrentStroke.pointHighlights[i].enabled = true;
+
+        // Color coding: start/end = green, corners = yellow
+        if (i == 0 || i == CurrentStroke.pointHighlights.Count - 1)
+        {
+          CurrentStroke.pointHighlights[i].color = Color.green;
+        }
+        else
+        {
+          CurrentStroke.pointHighlights[i].color = Color.yellow;
+        }
+      }
+    }
+
+    Debug.Log($"[CalligraphyPaper] ShowStrokeGuide - Displayed {CurrentStroke.pointHighlights.Count} point highlights");
+  }
+
+  /// <summary>
+  /// Show or hide the start point highlight.
+  /// </summary>
+  public void ShowStartHighlight(bool show)
+  {
+    if (CurrentStroke == null || CurrentStroke.pointHighlights.Count == 0) return;
+
+    if (CurrentStroke.pointHighlights[0] != null)
+    {
+      CurrentStroke.pointHighlights[0].enabled = show;
+    }
+  }
+
+  /// <summary>
+  /// Show or hide the end point highlight.
+  /// </summary>
+  public void ShowEndHighlight(bool show)
+  {
+    if (CurrentStroke == null || CurrentStroke.pointHighlights.Count == 0) return;
+
+    int endIndex = CurrentStroke.pointHighlights.Count - 1;
+    if (CurrentStroke.pointHighlights[endIndex] != null)
+    {
+      CurrentStroke.pointHighlights[endIndex].enabled = show;
     }
 
     isDrawing = true;
+    activeLineRenderer = CurrentStroke.lineRenderer;
 
     // Configure LineRenderer
-    strokeLineRenderer.positionCount = 2;
-    strokeLineRenderer.startWidth = lineWidth;
-    strokeLineRenderer.endWidth = lineWidth;
-    strokeLineRenderer.startColor = drawingColor;
-    strokeLineRenderer.endColor = drawingColor;
+    activeLineRenderer.positionCount = 2;
+    activeLineRenderer.startWidth = lineWidth;
+    activeLineRenderer.endWidth = lineWidth;
+    activeLineRenderer.startColor = drawingColor;
+    activeLineRenderer.endColor = drawingColor;
 
     // Set both points to start position with Z offset
     Vector3 startWorld = ApplyZOffset(GetCurrentStrokeStart());
-    strokeLineRenderer.SetPosition(0, startWorld);
-    strokeLineRenderer.SetPosition(1, startWorld);
+    activeLineRenderer.SetPosition(0, startWorld);
+    activeLineRenderer.SetPosition(1, startWorld);
 
     // Make visible
-    strokeLineRenderer.enabled = true;
+    activeLineRenderer.enabled = true;
 
-    Debug.Log($"[CalligraphyPaper] StartDrawing - Line initialized at {startWorld}");
+    Debug.Log($"[CalligraphyPaper] StartDrawing - Line initialized at {startWorld} for stroke {currentStrokeIndex + 1}/{TotalStrokes}");
   }
 
   /// <summary>
@@ -154,11 +203,11 @@ public class CalligraphyPaper : MonoBehaviour
   /// </summary>
   public void UpdateLine(Vector3 worldPoint)
   {
-    if (!isDrawing || strokeLineRenderer == null)
+    if (!isDrawing || activeLineRenderer == null)
       return;
 
     // Update second point to cursor position with Z offset
-    strokeLineRenderer.SetPosition(1, ApplyZOffset(worldPoint));
+    activeLineRenderer.SetPosition(1, ApplyZOffset(worldPoint));
   }
 
   /// <summary>
@@ -171,7 +220,7 @@ public class CalligraphyPaper : MonoBehaviour
   }
 
   /// <summary>
-  /// Complete the current stroke. Changes line to completed color and fires events.
+  /// Complete the current stroke. Changes line to black and advances to next stroke.
   /// </summary>
   public void CompleteStroke()
   {
@@ -180,18 +229,27 @@ public class CalligraphyPaper : MonoBehaviour
 
     isDrawing = false;
 
-    // Hide the temporary stroke line (character fade will reveal the real stroke)
-    if (strokeLineRenderer != null)
+    // Turn line black (completed color)
+    if (activeLineRenderer != null)
     {
-      strokeLineRenderer.enabled = false;
-      strokeLineRenderer.positionCount = 0;
+      activeLineRenderer.startColor = completedColor;
+      activeLineRenderer.endColor = completedColor;
     }
 
-    Debug.Log("[CalligraphyPaper] CompleteStroke - Temporary line hidden");
+    Debug.Log($"[CalligraphyPaper] CompleteStroke - Stroke {currentStrokeIndex + 1}/{TotalStrokes} completed");
 
-    // Fire events
-    OnStrokeCompleted?.Invoke(0);
-    OnAllStrokesCompleted?.Invoke();
+    // Fire stroke completed event
+    OnStrokeCompleted?.Invoke(currentStrokeIndex);
+
+    // Advance to next stroke
+    currentStrokeIndex++;
+
+    // Check if all strokes complete
+    if (AllStrokesComplete)
+    {
+      Debug.Log("[CalligraphyPaper] All strokes completed!");
+      OnAllStrokesCompleted?.Invoke();
+    }
   }
 
   /// <summary>
@@ -205,35 +263,42 @@ public class CalligraphyPaper : MonoBehaviour
     isDrawing = false;
 
     // Hide the line
-    if (strokeLineRenderer != null)
+    if (activeLineRenderer != null)
     {
-      strokeLineRenderer.enabled = false;
-      strokeLineRenderer.positionCount = 0;
+      activeLineRenderer.enabled = false;
+      activeLineRenderer.positionCount = 0;
     }
 
     Debug.Log("[CalligraphyPaper] CancelStroke - Line hidden");
   }
 
   /// <summary>
-  /// Show or hide the start point highlight.
+  /// Reset to first stroke (used when restarting the character).
   /// </summary>
-  public void ShowStartHighlight(bool show)
+  public void ResetStrokes()
   {
-    if (startHighlight != null)
-    {
-      startHighlight.enabled = show;
-    }
-  }
+    currentStrokeIndex = 0;
+    isDrawing = false;
+    activeLineRenderer = null;
 
-  /// <summary>
-  /// Show or hide the end point highlight.
-  /// </summary>
-  public void ShowEndHighlight(bool show)
-  {
-    if (endHighlight != null)
+    // Hide all guides
+    foreach (var stroke in strokes)
     {
-      endHighlight.enabled = show;
+      if (stroke != null)
+      {
+        foreach (var highlight in stroke.pointHighlights)
+        {
+          if (highlight != null) highlight.enabled = false;
+        }
+
+        if (stroke.lineRenderer != null)
+        {
+          stroke.lineRenderer.enabled = false;
+        }
+      }
     }
+
+    Debug.Log("[CalligraphyPaper] ResetStrokes - Ready for first stroke");
   }
 
   /// <summary>

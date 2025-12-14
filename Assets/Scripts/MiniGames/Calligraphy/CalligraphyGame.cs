@@ -43,6 +43,14 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     [Tooltip("How close to end point to complete stroke (more forgiving)")]
     [SerializeField] private float endRadius = 0.2f;
 
+    [Header("Corner Validation")]
+    [Tooltip("Track player path for corner validation")]
+    [SerializeField] private int pathSampleRate = 10; // Sample every N frames
+
+    // Path tracking for corner validation
+    private System.Collections.Generic.List<Vector3> playerPath = new System.Collections.Generic.List<Vector3>();
+    private int frameCounter = 0;
+
     [Header("Timing")]
     [Tooltip("Time to show full paper before zooming to stroke")]
     [SerializeField] private float initialPauseTime = 1.0f;
@@ -265,9 +273,13 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         if (distance <= startRadius)
         {
             // Start drawing!
+            playerPath.Clear();
+            playerPath.Add(hit.point);
+            frameCounter = 0;
+
             currentPaper.StartDrawing();
             currentState = CalligraphyState.Drawing;
-            Debug.Log($"[CalligraphyGame] Started drawing! Distance to start: {distance:F3}");
+            Debug.Log($"[CalligraphyGame] Started drawing stroke {currentPaper.CurrentStroke != null}! Distance to start: {distance:F3}");
         }
         else
         {
@@ -284,6 +296,14 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
         if (hitPaper && currentPaper != null)
         {
             currentPaper.UpdateLine(hit.point);
+
+            // Sample player path for corner validation
+            frameCounter++;
+            if (frameCounter >= pathSampleRate)
+            {
+                playerPath.Add(hit.point);
+                frameCounter = 0;
+            }
 
             // Show end highlight only when cursor is near end point
             Vector3 endPoint = currentPaper.GetCurrentStrokeEnd();
@@ -303,13 +323,18 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
             if (currentPaper == null)
                 return;
 
-            // Hide start highlight
+            // Hide highlights
             currentPaper.ShowStartHighlight(false);
-            // Hide end highlight
             currentPaper.ShowEndHighlight(false);
 
-            // Check if released near end point
+            // Add final point
             if (hitPaper)
+            {
+                playerPath.Add(hit.point);
+            }
+
+            // Check if released near end point AND passed through all corners
+            if (hitPaper && ValidateStrokePath())
             {
                 Vector3 endPoint = currentPaper.GetCurrentStrokeEnd();
                 float distance = Vector3.Distance(hit.point, endPoint);
@@ -318,13 +343,24 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
                 {
                     // Success! Complete the stroke
                     currentPaper.CompleteStroke();
-                    currentPaper.RevealCharacter();
 
-                    // Change state IMMEDIATELY to prevent HandleDrawingState from re-enabling highlights
-                    currentState = CalligraphyState.TransitioningBackWide;
+                    // Check if all strokes complete
+                    if (currentPaper.AllStrokesComplete)
+                    {
+                        // Fade character to black
+                        currentPaper.RevealCharacter();
 
-                    // Start post-completion sequence (zoom back to wide)
-                    StartCoroutine(PostCompletionSequence());
+                        // Change state and finish game
+                        currentState = CalligraphyState.TransitioningBackWide;
+                        StartCoroutine(PostCompletionSequence());
+                    }
+                    else
+                    {
+                        // More strokes remaining - hide current guide and prepare next
+                        currentPaper.HideStrokeGuide();
+                        currentState = CalligraphyState.WaitingToStart;
+                        Debug.Log($"[CalligraphyGame] Stroke complete! Next stroke: {currentPaper.CurrentStroke != null}/{currentPaper.TotalStrokes}");
+                    }
                     return;
                 }
                 else
@@ -332,12 +368,56 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
                     Debug.Log($"[CalligraphyGame] Released too far from end. Distance: {distance:F3}, Required: {endRadius}");
                 }
             }
+            else
+            {
+                Debug.Log("[CalligraphyGame] Stroke path invalid - missed corner waypoint(s)");
+            }
 
-            // Not near end - cancel stroke
+            // Not near end or invalid path - cancel stroke
             currentPaper.CancelStroke();
             currentState = CalligraphyState.WaitingToStart;
             Debug.Log("[CalligraphyGame] Stroke cancelled - try again");
         }
+    }
+
+    /// <summary>
+    /// Validate that player path passed through all required corner waypoints.
+    /// </summary>
+    private bool ValidateStrokePath()
+    {
+        if (currentPaper == null || currentPaper.CurrentStroke == null)
+            return false;
+
+        StrokeData stroke = currentPaper.CurrentStroke;
+
+        // Simple strokes (2 points) don't need corner validation
+        if (!stroke.IsCompound)
+            return true;
+
+        // Check each corner waypoint
+        var corners = stroke.GetCornerPoints();
+        foreach (Vector3 corner in corners)
+        {
+            bool foundCorner = false;
+
+            foreach (Vector3 pathPoint in playerPath)
+            {
+                if (Vector3.Distance(pathPoint, corner) <= stroke.tolerance)
+                {
+                    foundCorner = true;
+                    break;
+                }
+            }
+
+            if (!foundCorner)
+            {
+                Debug.Log($"[CalligraphyGame] Failed validation - missed corner at {corner}");
+                return false;
+            }
+        }
+
+        Debug.Log($"[CalligraphyGame] Path validated - passed through all {corners.Count} corners");
+        return true;
     }
 
     /// <summary>

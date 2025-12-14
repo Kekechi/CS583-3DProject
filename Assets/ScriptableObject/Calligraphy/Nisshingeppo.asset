@@ -10,10 +10,10 @@ MonoBehaviour:
   m_Enabled: 1
   m_EditorHideFlags: 0
   m_Script: {fileID: 11500000, guid: 482aba553b6bebe4f8882b90b92f3710, type: 3}
-  m_Name: Ichigoichie 1
+  m_Name: Nisshingeppo
   m_EditorClassIdentifier: 
-  phraseName: "\u4E00\u671F\u4E00\u4F1A"
-  phraseReading: Ichigoichie
-  phraseMeaning: Once-in-a-lifetime encounter
-  paperPrefab: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
-  scrollPrefab: {fileID: 8574706960239500837, guid: 59d6dfd7622042546bc3123208bc183e, type: 3}
+  phraseName: "\u65E5\u9032\u6708\u6B69"
+  phraseReading: Nisshingeppo
+  phraseMeaning: 
+  paperPrefab: {fileID: 8574706960239500837, guid: 568e40fbb2d23be4aa2797cc902578d5, type: 3}
+  scrollPrefab: {fileID: 8574706960239500837, guid: d1a34a2a102f3b74abbc3bf0be7fe2cf, type: 3}

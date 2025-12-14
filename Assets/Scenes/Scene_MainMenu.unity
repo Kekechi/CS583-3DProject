@@ -5332,8 +5332,8 @@ MonoBehaviour:
   selectedBorderColor: {r: 1, g: 0.84, b: 0, a: 1}
   hoverScale: 1.05
   animationSpeed: 0.1
-  customItemName: Calligraphy ---
-  itemIcon: {fileID: 21300000, guid: ba70c71542d76254782c39ec4ef1dcbc, type: 3}
+  customItemName: Calligraphy Nisshingeppo
+  itemIcon: {fileID: 21300000, guid: 3bc1a453cbde55142a3aecf0d91e6cdc, type: 3}
 --- !u!114 &1641761885
 MonoBehaviour:
   m_ObjectHideFlags: 0

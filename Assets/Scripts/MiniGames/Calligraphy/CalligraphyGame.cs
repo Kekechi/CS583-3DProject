@@ -246,17 +246,17 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
     /// </summary>
     private void HandleWaitingState(bool hitPaper, RaycastHit hit)
     {
-        // Check hover for start highlight (always, not just on click)
+        // Always show start point and corners when hovering over paper
         if (hitPaper && currentPaper != null)
         {
-            Vector3 startPoint = currentPaper.GetCurrentStrokeStart();
-            float hoverDistance = Vector3.Distance(hit.point, startPoint);
-            bool nearStart = hoverDistance <= startRadius;
-            currentPaper.ShowStartHighlight(nearStart);
+            currentPaper.ShowStartHighlight(true);
+            currentPaper.ShowCornerHighlights(true);
         }
         else if (currentPaper != null)
         {
+            // Hide all highlights when cursor is off paper
             currentPaper.ShowStartHighlight(false);
+            currentPaper.ShowCornerHighlights(false);
         }
 
         // Need mouse down to start
@@ -323,15 +323,15 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
             if (currentPaper == null)
                 return;
 
-            // Hide highlights
-            currentPaper.ShowStartHighlight(false);
-            currentPaper.ShowEndHighlight(false);
-
             // Add final point
             if (hitPaper)
             {
                 playerPath.Add(hit.point);
             }
+
+            // Hide highlights on release
+            currentPaper.ShowStartHighlight(false);
+            currentPaper.ShowEndHighlight(false);
 
             // Check if released near end point AND passed through all corners
             if (hitPaper && ValidateStrokePath())
@@ -357,7 +357,7 @@ public class CalligraphyGame : MonoBehaviour, IMiniGame
                     else
                     {
                         // More strokes remaining - hide current guide and prepare next
-                        currentPaper.HideStrokeGuide();
+                        currentPaper.ShowCornerHighlights(false);
                         currentState = CalligraphyState.WaitingToStart;
                         Debug.Log($"[CalligraphyGame] Stroke complete! Next stroke: {currentPaper.CurrentStroke != null}/{currentPaper.TotalStrokes}");
                     }

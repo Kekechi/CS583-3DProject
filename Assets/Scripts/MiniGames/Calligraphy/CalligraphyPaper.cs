@@ -51,6 +51,7 @@ public class CalligraphyPaper : MonoBehaviour
   private Coroutine fadeCoroutine;
   private bool isFading = false;
   private LineRenderer activeLineRenderer;
+  private int nextCornerIndex = 0; // Track which corner we're waiting to pass through
 
   // Events
   public event Action<int> OnStrokeCompleted;
@@ -144,6 +145,22 @@ public class CalligraphyPaper : MonoBehaviour
   }
 
   /// <summary>
+  /// Hide all guide visuals for the current stroke.
+  /// </summary>
+  public void HideStrokeGuide()
+  {
+    if (CurrentStroke == null) return;
+
+    foreach (var highlight in CurrentStroke.pointHighlights)
+    {
+      if (highlight != null)
+      {
+        highlight.enabled = false;
+      }
+    }
+  }
+
+  /// <summary>
   /// Show or hide the start point highlight.
   /// </summary>
   public void ShowStartHighlight(bool show)
@@ -153,6 +170,10 @@ public class CalligraphyPaper : MonoBehaviour
     if (CurrentStroke.pointHighlights[0] != null)
     {
       CurrentStroke.pointHighlights[0].enabled = show;
+      if (show)
+      {
+        CurrentStroke.pointHighlights[0].color = Color.green;
+      }
     }
   }
 
@@ -167,10 +188,47 @@ public class CalligraphyPaper : MonoBehaviour
     if (CurrentStroke.pointHighlights[endIndex] != null)
     {
       CurrentStroke.pointHighlights[endIndex].enabled = show;
+      if (show)
+      {
+        CurrentStroke.pointHighlights[endIndex].color = Color.green;
+      }
+    }
+  }
+
+  /// <summary>
+  /// Show corner highlights (for compound strokes).
+  /// </summary>
+  public void ShowCornerHighlights(bool show)
+  {
+    if (CurrentStroke == null || !CurrentStroke.IsCompound) return;
+
+    for (int i = 1; i < CurrentStroke.pointHighlights.Count - 1; i++)
+    {
+      if (CurrentStroke.pointHighlights[i] != null)
+      {
+        CurrentStroke.pointHighlights[i].enabled = show;
+        if (show)
+        {
+          CurrentStroke.pointHighlights[i].color = Color.yellow;
+        }
+      }
+    }
+  }
+
+  /// <summary>
+  /// Begin drawing a stroke. Initializes the LineRenderer from start point.
+  /// </summary>
+  public void StartDrawing()
+  {
+    if (CurrentStroke == null || CurrentStroke.lineRenderer == null)
+    {
+      Debug.LogError("[CalligraphyPaper] No LineRenderer assigned to current stroke!");
+      return;
     }
 
     isDrawing = true;
     activeLineRenderer = CurrentStroke.lineRenderer;
+    nextCornerIndex = 0; // Reset corner tracking
 
     // Configure LineRenderer
     activeLineRenderer.positionCount = 2;
@@ -178,6 +236,7 @@ public class CalligraphyPaper : MonoBehaviour
     activeLineRenderer.endWidth = lineWidth;
     activeLineRenderer.startColor = drawingColor;
     activeLineRenderer.endColor = drawingColor;
+    activeLineRenderer.alignment = LineAlignment.View; // Always face camera for consistent width
 
     // Set both points to start position with Z offset
     Vector3 startWorld = ApplyZOffset(GetCurrentStrokeStart());
@@ -206,8 +265,37 @@ public class CalligraphyPaper : MonoBehaviour
     if (!isDrawing || activeLineRenderer == null)
       return;
 
-    // Update second point to cursor position with Z offset
-    activeLineRenderer.SetPosition(1, ApplyZOffset(worldPoint));
+    // Check if we've passed through the next corner (for compound strokes)
+    if (CurrentStroke != null && CurrentStroke.IsCompound)
+    {
+      var corners = CurrentStroke.GetCornerPoints();
+      if (nextCornerIndex < corners.Count)
+      {
+        Vector3 nextCorner = corners[nextCornerIndex];
+        float distanceToCorner = Vector3.Distance(worldPoint, nextCorner);
+
+        if (distanceToCorner <= CurrentStroke.tolerance)
+        {
+          // Passed through corner! Add it to the LineRenderer
+          nextCornerIndex++;
+          int newPointCount = activeLineRenderer.positionCount + 1;
+          activeLineRenderer.positionCount = newPointCount;
+
+          // Shift the old endpoint to the corner position
+          activeLineRenderer.SetPosition(newPointCount - 2, ApplyZOffset(nextCorner));
+
+          // New endpoint is current cursor
+          activeLineRenderer.SetPosition(newPointCount - 1, ApplyZOffset(worldPoint));
+
+          Debug.Log($"[CalligraphyPaper] Passed corner {nextCornerIndex}/{corners.Count} - LineRenderer now has {newPointCount} points");
+          return;
+        }
+      }
+    }
+
+    // Update last point to cursor position with Z offset
+    int lastIndex = activeLineRenderer.positionCount - 1;
+    activeLineRenderer.SetPosition(lastIndex, ApplyZOffset(worldPoint));
   }
 
   /// <summary>
@@ -229,11 +317,28 @@ public class CalligraphyPaper : MonoBehaviour
 
     isDrawing = false;
 
-    // Turn line black (completed color)
+    // Snap line endpoint to exact end point position (keep corner points)
     if (activeLineRenderer != null)
     {
+      Vector3 endWorld = ApplyZOffset(GetCurrentStrokeEnd());
+      int lastIndex = activeLineRenderer.positionCount - 1;
+      activeLineRenderer.SetPosition(lastIndex, endWorld);
+
+      // Turn line black (completed color)
       activeLineRenderer.startColor = completedColor;
       activeLineRenderer.endColor = completedColor;
+    }
+
+    // Hide all point highlights for this stroke
+    if (CurrentStroke != null)
+    {
+      foreach (var highlight in CurrentStroke.pointHighlights)
+      {
+        if (highlight != null)
+        {
+          highlight.enabled = false;
+        }
+      }
     }
 
     Debug.Log($"[CalligraphyPaper] CompleteStroke - Stroke {currentStrokeIndex + 1}/{TotalStrokes} completed");
@@ -308,6 +413,28 @@ public class CalligraphyPaper : MonoBehaviour
   {
     if (strokeCharacter != null)
     {
+      // Hide all temporary stroke lines and highlights before revealing character
+      foreach (var stroke in strokes)
+      {
+        if (stroke != null)
+        {
+          // Hide line renderers
+          if (stroke.lineRenderer != null)
+          {
+            stroke.lineRenderer.enabled = false;
+          }
+
+          // Hide all point highlights
+          foreach (var highlight in stroke.pointHighlights)
+          {
+            if (highlight != null)
+            {
+              highlight.enabled = false;
+            }
+          }
+        }
+      }
+
       // Stop any existing fade
       if (fadeCoroutine != null)
       {
@@ -316,7 +443,7 @@ public class CalligraphyPaper : MonoBehaviour
 
       // Start fade animation
       fadeCoroutine = StartCoroutine(FadeCharacterCoroutine());
-      Debug.Log("[CalligraphyPaper] Character fade animation started");
+      Debug.Log("[CalligraphyPaper] Character fade animation started - temporary lines hidden");
     }
   }
 

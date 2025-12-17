@@ -137,6 +137,18 @@ public class AudioManager : MonoBehaviour
     }
 
     /// <summary>
+    /// Play button hover sound (quieter than click for UI hover feedback).
+    /// </summary>
+    public void PlayButtonHover()
+    {
+        if (buttonClick != null && sfxSource != null)
+        {
+            sfxSource.PlayOneShot(buttonClick, sfxVolume * 0.3f); // 30% volume for hover
+            Debug.Log("[AudioManager] Playing button hover");
+        }
+    }
+
+    /// <summary>
     /// Play checklist complete sound.
     /// </summary>
     public void PlayChecklistComplete()

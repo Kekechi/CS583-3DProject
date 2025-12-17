@@ -81,7 +81,7 @@ public class StoreItemButton : MonoBehaviour
       // Play hover sound
       if (AudioManager.Instance != null)
       {
-        AudioManager.Instance.PlaySpotClick(); // Subtle hover sound
+        AudioManager.Instance.PlayButtonHover(); // Quieter hover sound
       }
     }
   }

@@ -57,8 +57,8 @@ public class CameraController : MonoBehaviour
 
   void Update()
   {
-    // Only allow controls when not transitioning
-    if (!IsMoving)
+    // Only allow controls when not transitioning and in room exploration mode
+    if (!IsMoving && IsInRoomExplorationMode())
     {
       // Right-click to pan camera
       if (Input.GetMouseButton(1))
@@ -77,6 +77,22 @@ public class CameraController : MonoBehaviour
         transform.rotation = Quaternion.Euler(currentPitch, currentYaw, 0f);
       }
     }
+  }
+
+  /// <summary>
+  /// Check if camera panning should be enabled (only during room exploration).
+  /// GameManager States:
+  ///   - PlacingItem: Player is in room view, can click spots to start mini-games (CAMERA PANNING ENABLED)
+  ///   - PlayingMiniGame: Player is playing a mini-game (CAMERA PANNING DISABLED)
+  ///   - RoomCompletion: All items placed, showing completion UI (CAMERA PANNING DISABLED)
+  /// </summary>
+  private bool IsInRoomExplorationMode()
+  {
+    if (GameManager.Instance == null)
+      return false;
+
+    // Only allow panning when player is exploring the room and placing items
+    return GameManager.Instance.CurrentState == GameManager.GameState.PlacingItem;
   }
 
   /// <summary>

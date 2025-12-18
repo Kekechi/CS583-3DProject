@@ -12,6 +12,9 @@ public class LanternDesign : ScriptableObject
     [Tooltip("Name of this lantern design (e.g., 'Classic Cube', 'Cylinder Lantern')")]
     public string designName = "Lantern";
 
+    [Tooltip("Preview icon for Store UI and unlock notifications")]
+    public Sprite previewIcon;
+
     [Header("Room Item")]
     [Tooltip("Prefab placed in the room after lantern game completion")]
     public GameObject roomItemPrefab;

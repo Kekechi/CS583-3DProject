@@ -15,5 +15,6 @@ MonoBehaviour:
   phraseName: "\u65E5\u9032\u6708\u6B69"
   phraseReading: Nisshingeppo
   phraseMeaning: 
+  previewIcon: {fileID: 21300000, guid: 3bc1a453cbde55142a3aecf0d91e6cdc, type: 3}
   paperPrefab: {fileID: 8574706960239500837, guid: 568e40fbb2d23be4aa2797cc902578d5, type: 3}
   scrollPrefab: {fileID: 8574706960239500837, guid: d1a34a2a102f3b74abbc3bf0be7fe2cf, type: 3}

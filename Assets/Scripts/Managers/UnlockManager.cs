@@ -133,6 +133,23 @@ public class UnlockManager : MonoBehaviour
     return string.Empty;
   }
 
+  /// <summary>
+  /// Get the preview icon sprite for the latest unlock.
+  /// Returns null if no new unlock or if sprite is not assigned.
+  /// </summary>
+  public Sprite GetLatestUnlockIcon()
+  {
+    // Check which unlock just happened based on completion count
+    if (unlockData.roomCompletions == 1)
+      return lanternStyleB != null ? lanternStyleB.previewIcon : null;
+    if (unlockData.roomCompletions == 3)
+      return origamiStyleB != null ? origamiStyleB.previewIcon : null;
+    if (unlockData.roomCompletions == 6)
+      return calligraphyStyleB != null ? calligraphyStyleB.previewIcon : null;
+
+    return null;
+  }
+
   // ─────────────────────────────────────────────────────────────────────────
   // Selection
   // ─────────────────────────────────────────────────────────────────────────

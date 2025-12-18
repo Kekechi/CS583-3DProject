@@ -12,6 +12,9 @@ public class OrigamiDesign : ScriptableObject
   [Tooltip("Name of this origami design (e.g., 'Crane', 'Boat')")]
   public string designName = "New Origami";
 
+  [Tooltip("Preview icon for Store UI and unlock notifications")]
+  public Sprite previewIcon;
+
   [Header("Gameplay")]
   [Tooltip("Sequence of arrow keys the player must press")]
   public KeyCode[] arrowSequence = new KeyCode[]

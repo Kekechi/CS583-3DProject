@@ -15,5 +15,6 @@ MonoBehaviour:
   phraseName: "\u4E00\u671F\u4E00\u4F1A"
   phraseReading: Ichigoichie
   phraseMeaning: Once-in-a-lifetime encounter
+  previewIcon: {fileID: 21300000, guid: ba70c71542d76254782c39ec4ef1dcbc, type: 3}
   paperPrefab: {fileID: 8574706960239500837, guid: 3ccaddf151e6cc74584d5f073d22c9f0, type: 3}
   scrollPrefab: {fileID: 8574706960239500837, guid: 59d6dfd7622042546bc3123208bc183e, type: 3}

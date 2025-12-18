@@ -333,6 +333,7 @@ MonoBehaviour:
   continueButton: {fileID: 1074269845}
   unlockNotificationPanel: {fileID: 1368743233}
   unlockText: {fileID: 1523577829}
+  unlockIconImage: {fileID: 607298735}
   ratingContainer: {fileID: 0}
   mainMenuSceneName: Scene_MainMenu
   completionTitle: Room Complete!
@@ -1732,7 +1733,7 @@ MonoBehaviour:
     m_PersistentCalls:
       m_Calls: []
   m_text: "Instruction:\nPress <SPACE> to adjust intensity of lantern light. \nKeep
-    it in green zone for 10 seconds!"
+    it in green zone!"
   m_isRightToLeft: 0
   m_fontAsset: {fileID: 11400000, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}
   m_sharedMaterial: {fileID: 2180264, guid: 8f586378b4e144a9851e7b34d9b748ee, type: 2}

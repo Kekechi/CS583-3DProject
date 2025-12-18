@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: LanternCube
   m_EditorClassIdentifier: 
   designName: Classic Lantern
+  previewIcon: {fileID: 21300000, guid: 6e656738896f72e4a9e617d0c8782c9e, type: 3}
   roomItemPrefab: {fileID: 7631074988119963334, guid: 4cb2174fe58d18d498abab7a42ce13d3, type: 3}
   goalTime: 3
   brightnessRange: {x: 0.6, y: 0.8}

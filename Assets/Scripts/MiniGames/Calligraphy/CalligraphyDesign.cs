@@ -17,6 +17,9 @@ public class CalligraphyDesign : ScriptableObject
   [Tooltip("English meaning (e.g., Once-in-a-lifetime encounter)")]
   public string phraseMeaning;
 
+  [Tooltip("Preview icon for Store UI and unlock notifications")]
+  public Sprite previewIcon;
+
   [Header("Prefabs")]
   [Tooltip("Paper prefab containing CalligraphyPaper component and all visuals")]
   public GameObject paperPrefab;

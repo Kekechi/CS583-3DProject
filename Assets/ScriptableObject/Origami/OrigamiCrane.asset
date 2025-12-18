@@ -13,6 +13,7 @@ MonoBehaviour:
   m_Name: OrigamiCrane
   m_EditorClassIdentifier: 
   designName: Crane
+  previewIcon: {fileID: 21300000, guid: b352c3b7c5df46043b6f30e9b8088b81, type: 3}
   arrowSequence: 110100001301000012010000120100001401000011010000
   finalModelPrefab: {fileID: 8960722844774331853, guid: 5aff90c4fab5a3f4a867047c0b4a72ca, type: 3}
   roomItemPrefab: {fileID: 8960722844774331853, guid: beddee6f145566146aec9eca56c68325, type: 3}

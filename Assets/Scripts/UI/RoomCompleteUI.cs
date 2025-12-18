@@ -20,6 +20,7 @@ public class RoomCompleteUI : MonoBehaviour
   [Header("Unlock Notification")]
   [SerializeField] private GameObject unlockNotificationPanel;
   [SerializeField] private TMP_Text unlockText;
+  [SerializeField] private UnityEngine.UI.Image unlockIconImage;
 
   [Header("Future: Quality Rating")]
   [SerializeField] private GameObject ratingContainer;
@@ -148,6 +149,22 @@ public class RoomCompleteUI : MonoBehaviour
       if (unlockText != null)
       {
         unlockText.text = $"{latestUnlock}";
+      }
+
+      // Display unlock icon
+      if (unlockIconImage != null)
+      {
+        Sprite unlockIcon = UnlockManager.Instance.GetLatestUnlockIcon();
+        if (unlockIcon != null)
+        {
+          unlockIconImage.sprite = unlockIcon;
+          unlockIconImage.enabled = true;
+        }
+        else
+        {
+          unlockIconImage.enabled = false;
+          Debug.LogWarning($"[RoomCompleteUI] No preview icon assigned for unlock: {latestUnlock}");
+        }
       }
 
       // Play unlock sound
